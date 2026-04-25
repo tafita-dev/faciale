@@ -41,5 +41,5 @@
 ## [Epic 7] Super Admin & System Onboarding
 
 - **Goal:** Enable the global management of Organizations and verify the end-to-end system flow.
-- **Status:** BACKLOG
+- **Status:** DONE (stories generated)
 - **Ref:** @specs/01-PRD.md#feature-multi-level-user-management

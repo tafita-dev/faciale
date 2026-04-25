@@ -23,6 +23,7 @@ def mock_db():
     # Setup async methods on collection
     mock_coll.find_one = AsyncMock()
     mock_coll.insert_one = AsyncMock()
+    mock_coll.delete_one = AsyncMock()
     
     app.dependency_overrides[get_database] = lambda: mock_db_instance
     yield mock_db_instance
@@ -118,3 +119,59 @@ async def test_list_organizations_success(mock_db, mock_admin_user):
     
     assert response.status_code == 200
     assert len(response.json()) == 2
+
+@pytest.mark.asyncio
+async def test_delete_organization_superadmin_success(mock_db, mock_superadmin_user):
+    org_id = "org123"
+    superadmin_token = get_superadmin_token()
+    
+    mock_db["organizations"].find_one.return_value = {"_id": org_id, "name": "Test Org"}
+    mock_db["organizations"].delete_one.return_value = MagicMock(deleted_count=1)
+    
+    response = client.delete(
+        f"/api/v1/orgs/{org_id}",
+        headers={"Authorization": f"Bearer {superadmin_token}"}
+    )
+    
+    assert response.status_code == 204
+    mock_db["organizations"].delete_one.assert_called_once_with({"_id": org_id})
+
+@pytest.mark.asyncio
+async def test_delete_organization_not_found(mock_db, mock_superadmin_user):
+    org_id = "nonexistent"
+    superadmin_token = get_superadmin_token()
+    
+    mock_db["organizations"].find_one.return_value = None
+    
+    response = client.delete(
+        f"/api/v1/orgs/{org_id}",
+        headers={"Authorization": f"Bearer {superadmin_token}"}
+    )
+    
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Organization not found"
+
+@pytest.mark.asyncio
+async def test_delete_organization_unauthorized_admin(mock_db, mock_admin_user):
+    org_id = "org123"
+    superuser_token = get_superuser_token()
+    
+    response = client.delete(
+        f"/api/v1/orgs/{org_id}",
+        headers={"Authorization": f"Bearer {superuser_token}"}
+    )
+    
+    # Based on technical notes, only superadmin should delete
+    assert response.status_code == 403
+
+@pytest.mark.asyncio
+async def test_delete_organization_unauthorized_orgadmin(mock_db, mock_org_admin_user):
+    org_id = "org123"
+    orgadmin_token = get_orgadmin_token()
+    
+    response = client.delete(
+        f"/api/v1/orgs/{org_id}",
+        headers={"Authorization": f"Bearer {orgadmin_token}"}
+    )
+    
+    assert response.status_code == 403
