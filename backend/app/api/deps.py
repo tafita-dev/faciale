@@ -55,9 +55,44 @@ def get_department_repository() -> DepartmentRepository:
 
 def get_reporting_service(
     attendance_repo: AttendanceRepository = Depends(get_attendance_repository),
-    employee_repo: EmployeeRepository = Depends(get_employee_repository)
+    employee_repo: EmployeeRepository = Depends(get_employee_repository),
+    org_repo: OrgRepository = Depends(get_org_repository)
 ) -> ReportingService:
-    return ReportingService(attendance_repo, employee_repo)
+    return ReportingService(attendance_repo, employee_repo, org_repo)
+
+async def check_superadmin(current_user: dict = Depends(get_current_user)) -> dict:
+    if current_user["role"] != "superadmin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Super Admins can access this resource"
+        )
+    return current_user
+
+async def check_org_admin(current_user: dict = Depends(get_current_user)) -> dict:
+    if current_user.get("role") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only organization admins can perform this action",
+        )
+    if not current_user.get("org_id"):
+         raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin must belong to an organization",
+        )
+    return current_user
+
+async def check_org_user(current_user: dict = Depends(get_current_user)) -> dict:
+    if current_user.get("role") not in ["admin", "user"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
+    if not current_user.get("org_id"):
+         raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User must belong to an organization",
+        )
+    return current_user
 
 def get_attendance_service(
     recognition_service: RecognitionService = Depends(get_recognition_service),

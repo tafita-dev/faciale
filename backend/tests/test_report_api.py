@@ -12,7 +12,7 @@ def mock_user():
         "_id": "user123",
         "email": "admin@org.com",
         "org_id": "org_a",
-        "role": "org_admin"
+        "role": "admin"
     }
 
 @pytest.fixture
@@ -114,3 +114,39 @@ async def test_export_attendance_logs_csv_success(override_deps, mock_reporting_
     assert "attachment; filename=attendance_logs_" in response.headers["Content-Disposition"]
     assert "Date,Time,Employee Name,Department,Status,Confidence Score" in response.text
     assert "John Doe,HR,success,0.95" in response.text
+
+@pytest.fixture
+def mock_superadmin():
+    return {
+        "_id": "super123",
+        "email": "superadmin@faciale.com",
+        "role": "superadmin"
+    }
+
+@pytest.mark.asyncio
+async def test_get_system_stats_success(mock_superadmin, mock_reporting_service):
+    app.dependency_overrides[deps.check_superadmin] = lambda: mock_superadmin
+    app.dependency_overrides[deps.get_reporting_service] = lambda: mock_reporting_service
+    
+    mock_reporting_service.get_system_stats.return_value = {
+        "total_organizations": 5
+    }
+    
+    response = client.get("/api/v1/reports/system-stats")
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["data"]["total_organizations"] == 5
+    assert "total_users" not in data["data"]
+    
+    app.dependency_overrides.clear()
+
+@pytest.mark.asyncio
+async def test_get_system_stats_unauthorized(override_deps, mock_reporting_service):
+    # override_deps sets user as org_admin
+    response = client.get("/api/v1/reports/system-stats")
+    
+    # Since check_superadmin depends on get_current_user, it should fail
+    assert response.status_code == 403
+    app.dependency_overrides.clear()

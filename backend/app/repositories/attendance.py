@@ -34,14 +34,40 @@ class AttendanceRepository:
             return AttendanceLog(**doc)
         return None
 
-    async def get_today_stats(self, org_id: str, start_of_today: datetime, late_threshold: datetime) -> dict:
+    async def find_open_log(self, org_id: str, employee_id: str) -> Optional[AttendanceLog]:
+        """Find a log that has a check_in but no check_out for today."""
+        now = datetime.now()
+        start_of_today = datetime.combine(now.date(), datetime.min.time())
+        
+        doc = await self.collection.find_one({
+            "org_id": org_id,
+            "employee_id": employee_id,
+            "status": "success",
+            "check_in": {"$exists": True, "$gte": start_of_today},
+            "check_out": None
+        })
+        if doc:
+            return AttendanceLog(**doc)
+        return None
+
+    async def update_log(self, log_id: str, update_data: dict):
+        await self.collection.update_one(
+            {"_id": log_id},
+            {"$set": update_data}
+        )
+
+    async def get_today_stats(self, org_id: str, start_of_today: datetime, late_threshold: datetime, user_id: Optional[str] = None) -> dict:
+        match_query = {
+            "org_id": org_id,
+            "timestamp": {"$gte": start_of_today},
+            "status": "success"
+        }
+        if user_id:
+            match_query["user_id"] = user_id
+
         pipeline = [
             {
-                "$match": {
-                    "org_id": org_id,
-                    "timestamp": {"$gte": start_of_today},
-                    "status": "success"
-                }
+                "$match": match_query
             },
             {
                 "$group": {
@@ -79,20 +105,23 @@ class AttendanceRepository:
         size: int = 10,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        dept_id: Optional[str] = None
+        dept_id: Optional[str] = None,
+        user_id: Optional[str] = None
     ) -> Tuple[List[dict], int]:
         match_query = {"org_id": org_id}
+        if user_id:
+            match_query["user_id"] = user_id
         
         if start_date or end_date:
             timestamp_filter = {}
             if start_date:
-                timestamp_filter["$gte"] = datetime.fromisoformat(start_date)
+                timestamp_filter["$gte"] = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
             if end_date:
                 # If only date is provided, include the whole day
                 if len(end_date) <= 10:
-                    timestamp_filter["$lte"] = datetime.fromisoformat(f"{end_date}T23:59:59.999Z")
+                    timestamp_filter["$lte"] = datetime.fromisoformat(f"{end_date}T23:59:59.999Z".replace("Z", "+00:00"))
                 else:
-                    timestamp_filter["$lte"] = datetime.fromisoformat(end_date)
+                    timestamp_filter["$lte"] = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
             match_query["timestamp"] = timestamp_filter
 
         pipeline = [
@@ -105,11 +134,14 @@ class AttendanceRepository:
                     "as": "employee"
                 }
             },
-            {"$unwind": "$employee"}
+            {"$unwind": {
+                "path": "$employee",
+                "preserveNullAndEmptyArrays": True
+            }}
         ]
 
         if dept_id:
-            pipeline.append({"$match": {"employee.department_id": dept_id}})
+            pipeline.append({"$match": {"employee.dept_id": dept_id}}) # Fixed dept_id field name if needed
 
         # Add sorting
         pipeline.append({"$sort": {"timestamp": -1}})
@@ -125,11 +157,11 @@ class AttendanceRepository:
                         "$project": {
                             "id": {"$toString": "$_id"},
                             "employee_id": 1,
-                            "employee_name": "$employee.full_name",
-                            "department_id": "$employee.department_id",
+                            "employee_name": "$employee.name",
+                            "department_id": "$employee.dept_id",
                             "timestamp": 1,
                             "status": 1,
-                            "confidence": 1
+                            "confidence": "$confidence_score"
                         }
                     }
                 ]
@@ -147,9 +179,13 @@ class AttendanceRepository:
         
         return items, total
 
-    async def get_logs_cursor(self, org_id: str):
+    async def get_logs_cursor(self, org_id: str, user_id: Optional[str] = None):
+        match_query = {"org_id": org_id}
+        if user_id:
+            match_query["user_id"] = user_id
+            
         pipeline = [
-            {"$match": {"org_id": org_id}},
+            {"$match": match_query},
             {
                 "$lookup": {
                     "from": "employees",
@@ -158,11 +194,14 @@ class AttendanceRepository:
                     "as": "employee"
                 }
             },
-            {"$unwind": "$employee"},
+            {"$unwind": {
+                "path": "$employee",
+                "preserveNullAndEmptyArrays": True
+            }},
             {
                 "$lookup": {
                     "from": "departments",
-                    "localField": "employee.department_id",
+                    "localField": "employee.dept_id",
                     "foreignField": "_id",
                     "as": "department"
                 }
@@ -177,10 +216,10 @@ class AttendanceRepository:
             {
                 "$project": {
                     "timestamp": 1,
-                    "employee_name": "$employee.full_name",
+                    "employee_name": "$employee.name",
                     "department_name": {"$ifNull": ["$department.name", "N/A"]},
                     "status": 1,
-                    "confidence": 1
+                    "confidence": "$confidence_score"
                 }
             }
         ]

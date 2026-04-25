@@ -11,10 +11,13 @@ class OrgType(str, Enum):
 class OrgBase(BaseModel):
     name: str
     type: OrgType
+    logo_url: Optional[str] = None
     recognition_threshold: Optional[float] = Field(None, ge=0.0, le=1.0)
 
 class OrgCreate(OrgBase):
-    pass
+    admin_email: str
+    admin_password: str
+    admin_name: str
 
 class OrgUpdate(BaseModel):
     name: Optional[str] = None

@@ -13,7 +13,7 @@ router = APIRouter()
 async def check_in(
     *,
     file: UploadFile = File(...),
-    current_user: dict = Depends(deps.get_current_user),
+    current_user: dict = Depends(deps.check_org_user),
     attendance_service: AttendanceService = Depends(deps.get_attendance_service),
     employee_repo: EmployeeRepository = Depends(deps.get_employee_repository),
     attendance_repo: AttendanceRepository = Depends(deps.get_attendance_repository)
@@ -24,6 +24,7 @@ async def check_in(
     Includes debouncing logic (60s).
     """
     org_id = current_user.get("org_id")
+    user_id = current_user.get("_id")
     
     # 1. Basic file validation
     if file.content_type not in ["image/jpeg", "image/png"]:
@@ -41,7 +42,7 @@ async def check_in(
     # 2. Process attendance (Liveness + Matching + Logging)
     contents = await file.read()
     try:
-        result = await attendance_service.process_attendance(org_id, contents)
+        result = await attendance_service.process_attendance(org_id, contents, user_id=user_id)
     except ValueError as e:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -90,12 +91,15 @@ async def check_in(
     employee = await employee_repo.get_employee(employee_id)
     employee_name = employee.name if employee else "Unknown"
     
+    action = "checked in" if result.get("type") == "entry" else "checked out"
+    
     return {
         "success": True,
-        "message": f"Success: {employee_name} checked in.",
+        "message": f"Success: {employee_name} {action}.",
         "data": {
             "employee_id": employee_id,
             "employee_name": employee_name,
+            "type": result.get("type"),
             "score": result["score"],
             "timestamp": datetime.now(timezone.utc)
         }

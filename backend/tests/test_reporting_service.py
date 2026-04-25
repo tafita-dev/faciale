@@ -8,7 +8,11 @@ async def test_get_today_stats():
     mock_attendance_repo = AsyncMock()
     mock_employee_repo = AsyncMock()
     
-    service = ReportingService(mock_attendance_repo, mock_employee_repo)
+    service = ReportingService(
+        attendance_repo=mock_attendance_repo,
+        employee_repo=mock_employee_repo,
+        org_repo=AsyncMock()
+    )
     
     mock_employee_repo.count_employees.return_value = 20
     mock_attendance_repo.get_today_stats.return_value = {
@@ -35,7 +39,11 @@ async def test_get_today_stats():
 async def test_get_logs_service():
     mock_attendance_repo = AsyncMock()
     mock_employee_repo = AsyncMock()
-    service = ReportingService(attendance_repo=mock_attendance_repo, employee_repo=mock_employee_repo)
+    service = ReportingService(
+        attendance_repo=mock_attendance_repo,
+        employee_repo=mock_employee_repo,
+        org_repo=AsyncMock()
+    )
     
     mock_attendance_repo.get_logs_with_employee_info.return_value = ([], 0)
     
@@ -47,15 +55,41 @@ async def test_get_logs_service():
         size=5,
         start_date="2023-01-01",
         end_date=None,
-        dept_id=None
+        dept_id=None,
+        user_id=None
     )
+@pytest.mark.asyncio
+async def test_get_system_stats():
+    mock_attendance_repo = AsyncMock()
+    mock_employee_repo = AsyncMock()
+    mock_org_repo = AsyncMock()
+    
+    # We'll need to update ReportingService to accept org_repo
+    service = ReportingService(
+        attendance_repo=mock_attendance_repo,
+        employee_repo=mock_employee_repo,
+        org_repo=mock_org_repo
+    )
+    
+    mock_org_repo.count_all.return_value = 5
+    
+    stats = await service.get_system_stats()
+    
+    assert stats["total_organizations"] == 5
+    assert "total_users" not in stats
+    
+    mock_org_repo.count_all.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_get_today_stats_no_data():
     mock_attendance_repo = AsyncMock()
     mock_employee_repo = AsyncMock()
     
-    service = ReportingService(mock_attendance_repo, mock_employee_repo)
+    service = ReportingService(
+        attendance_repo=mock_attendance_repo,
+        employee_repo=mock_employee_repo,
+        org_repo=AsyncMock()
+    )
     
     mock_employee_repo.count_employees.return_value = 0
     mock_attendance_repo.get_today_stats.return_value = {

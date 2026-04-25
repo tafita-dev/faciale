@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     API_VERSION: str = "1.0.0"
 
     # MongoDB
-    MONGODB_URL: str = "mongodb://mongodb:27017"
+    MONGODB_URL: str = "mongodb://127.0.0.1:27017"
     MONGODB_DB_NAME: str = "faciale_db"
 
     # Qdrant

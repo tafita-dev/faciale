@@ -9,20 +9,20 @@ router = APIRouter()
 
 @router.get("/stats", response_model=dict)
 async def get_attendance_stats(
-    current_user: dict = Depends(deps.get_current_user),
+    user_id: Optional[str] = Query(None),
+    current_user: dict = Depends(deps.check_org_user),
     reporting_service: ReportingService = Depends(deps.get_reporting_service)
 ) -> Any:
     """
     Get today's attendance statistics for the organization.
-    Only accessible by Org Admin.
+    Isolation: admin sees all (or filtered by user_id), user sees only their own.
     """
-    if current_user["role"] != "org_admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Only Org Admins can access reporting statistics"
-        )
-    
-    stats = await reporting_service.get_today_stats(current_user["org_id"])
+    if current_user["role"] == "user":
+        effective_user_id = current_user["_id"]
+    else:
+        effective_user_id = user_id
+        
+    stats = await reporting_service.get_today_stats(current_user["org_id"], user_id=effective_user_id)
     return {
         "success": True,
         "data": stats
@@ -35,18 +35,18 @@ async def get_attendance_logs(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     dept_id: Optional[str] = None,
-    current_user: dict = Depends(deps.get_current_user),
+    user_id: Optional[str] = Query(None),
+    current_user: dict = Depends(deps.check_org_user),
     reporting_service: ReportingService = Depends(deps.get_reporting_service)
 ) -> Any:
     """
     Get paginated attendance logs with filtering.
-    Only accessible by Org Admin.
+    Isolation: admin sees all (or filtered by user_id), user sees only their own.
     """
-    if current_user["role"] != "org_admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Only Org Admins can access reporting logs"
-        )
+    if current_user["role"] == "user":
+        effective_user_id = current_user["_id"]
+    else:
+        effective_user_id = user_id
     
     logs = await reporting_service.get_logs(
         org_id=current_user["org_id"],
@@ -54,7 +54,8 @@ async def get_attendance_logs(
         size=size,
         start_date=start_date,
         end_date=end_date,
-        dept_id=dept_id
+        dept_id=dept_id,
+        user_id=effective_user_id
     )
     return {
         "success": True,
@@ -64,20 +65,20 @@ async def get_attendance_logs(
 @router.get("/export")
 async def export_attendance_logs(
     format: str = Query("csv", pattern="^csv$"),
-    current_user: dict = Depends(deps.get_current_user),
+    user_id: Optional[str] = Query(None),
+    current_user: dict = Depends(deps.check_org_user),
     reporting_service: ReportingService = Depends(deps.get_reporting_service)
 ) -> Any:
     """
     Export attendance logs as CSV.
-    Only accessible by Org Admin.
+    Isolation: admin sees all (or filtered by user_id), user sees only their own.
     """
-    if current_user["role"] != "org_admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Only Org Admins can export reporting logs"
-        )
-    
-    generator = await reporting_service.export_logs(current_user["org_id"])
+    if current_user["role"] == "user":
+        effective_user_id = current_user["_id"]
+    else:
+        effective_user_id = user_id
+        
+    generator = await reporting_service.export_logs(current_user["org_id"], user_id=effective_user_id)
     
     filename = f"attendance_logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     
@@ -88,3 +89,18 @@ async def export_attendance_logs(
             "Content-Disposition": f"attachment; filename={filename}"
         }
     )
+
+@router.get("/system-stats", response_model=dict)
+async def get_system_stats(
+    current_user: dict = Depends(deps.check_superadmin),
+    reporting_service: ReportingService = Depends(deps.get_reporting_service)
+) -> Any:
+    """
+    Get system-wide statistics.
+    Only accessible by Super Admin.
+    """
+    stats = await reporting_service.get_system_stats()
+    return {
+        "success": True,
+        "data": stats
+    }

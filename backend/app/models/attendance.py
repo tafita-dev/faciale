@@ -16,10 +16,14 @@ class AttendanceLog(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
     org_id: str
     employee_id: Optional[str] = None
+    user_id: Optional[str] = None # The user who recorded the pointage
     status: AttendanceStatus
     reason: Optional[AttendanceReason] = None
     confidence_score: float = 0.0
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # For paired entry/exit records as per new rules
+    check_in: Optional[datetime] = None
+    check_out: Optional[datetime] = None
 
     model_config = ConfigDict(
         populate_by_name=True,

@@ -3,36 +3,21 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api import deps
 from app.db.mongodb import get_database
 from app.models.org import Org, OrgCreate
+from app.core import security
 import uuid
 from datetime import datetime, timezone
 
 router = APIRouter()
-
-def check_admin(current_user: dict = Depends(deps.get_current_user)):
-    if current_user.get("role") not in ["admin", "superadmin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="The user doesn't have enough privileges",
-        )
-    return current_user
-
-def check_superadmin(current_user: dict = Depends(deps.get_current_user)):
-    if current_user.get("role") != "superadmin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only superadmins can perform this action",
-        )
-    return current_user
 
 @router.post("/", response_model=Org, status_code=status.HTTP_201_CREATED)
 async def create_org(
     *,
     db: Any = Depends(get_database),
     org_in: OrgCreate,
-    current_user: dict = Depends(check_admin)
+    current_user: dict = Depends(deps.check_superadmin)
 ) -> Any:
     """
-    Create new organization.
+    Create new organization and its admin user.
     """
     existing_org = await db["organizations"].find_one({"name": org_in.name})
     if existing_org:
@@ -41,21 +26,43 @@ async def create_org(
             detail="Organization with this name already exists.",
         )
     
+    existing_user = await db["users"].find_one({"email": org_in.admin_email})
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A user with this email already exists.",
+        )
+    
+    org_id = str(uuid.uuid4())
     org_obj = {
-        "_id": str(uuid.uuid4()),
+        "_id": org_id,
         "name": org_in.name,
         "type": org_in.type,
+        "logo_url": org_in.logo_url,
         "created_at": datetime.now(timezone.utc)
     }
     
     await db["organizations"].insert_one(org_obj)
+
+    # Create Org Admin User
+    admin_obj = {
+        "_id": str(uuid.uuid4()),
+        "email": org_in.admin_email,
+        "name": org_in.admin_name,
+        "password_hash": security.get_password_hash(org_in.admin_password),
+        "role": "admin",
+        "org_id": org_id,
+        "created_at": datetime.now(timezone.utc)
+    }
+    await db["users"].insert_one(admin_obj)
+
     return org_obj
 
 @router.get("/", response_model=List[Org])
 async def list_orgs(
     *,
     db: Any = Depends(get_database),
-    current_user: dict = Depends(check_admin)
+    current_user: dict = Depends(deps.check_superadmin)
 ) -> Any:
     """
     List organizations.
@@ -69,7 +76,7 @@ async def delete_org(
     *,
     db: Any = Depends(get_database),
     org_id: str,
-    current_user: dict = Depends(check_superadmin)
+    current_user: dict = Depends(deps.check_superadmin)
 ) -> None:
     """
     Delete an organization.

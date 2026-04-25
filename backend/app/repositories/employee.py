@@ -16,3 +16,6 @@ class EmployeeRepository:
 
     async def count_employees(self, org_id: str) -> int:
         return await self.collection.count_documents({"org_id": org_id})
+
+    async def count_all(self) -> int:
+        return await self.collection.count_documents({})

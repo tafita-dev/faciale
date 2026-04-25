@@ -18,6 +18,7 @@ class EmployeeUpdate(BaseModel):
 class EmployeeInDB(EmployeeBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
     org_id: str
+    created_by: Optional[str] = None
     is_active: bool = True
     is_enrolled: bool = False
     image_path: Optional[str] = None

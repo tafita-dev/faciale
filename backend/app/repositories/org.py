@@ -13,3 +13,6 @@ class OrgRepository:
         if doc:
             return OrgInDB(**doc)
         return None
+
+    async def count_all(self) -> int:
+        return await self.collection.count_documents({})
