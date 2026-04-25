@@ -10,6 +10,8 @@ from app.services.attendance import AttendanceService
 from app.services.reporting_service import ReportingService
 from app.repositories.attendance import AttendanceRepository
 from app.repositories.employee import EmployeeRepository
+from app.repositories.org import OrgRepository
+from app.repositories.department import DepartmentRepository
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login"
@@ -44,6 +46,12 @@ def get_attendance_repository() -> AttendanceRepository:
 
 def get_employee_repository() -> EmployeeRepository:
     return EmployeeRepository()
+
+def get_org_repository() -> OrgRepository:
+    return OrgRepository()
+
+def get_department_repository() -> DepartmentRepository:
+    return DepartmentRepository()
 
 def get_reporting_service(
     attendance_repo: AttendanceRepository = Depends(get_attendance_repository),

@@ -2,19 +2,35 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:faciale/features/auth/auth_provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:http/http.dart' as http;
 import 'auth_provider_test.mocks.dart';
 
+@GenerateMocks([http.Client, FlutterSecureStorage])
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late MockClient mockClient;
+  late MockFlutterSecureStorage mockStorage;
   late ProviderContainer container;
 
   setUp(() {
     mockClient = MockClient();
+    mockStorage = MockFlutterSecureStorage();
+    
+    // Stub storage methods
+    when(mockStorage.write(key: anyNamed('key'), value: anyNamed('value')))
+        .thenAnswer((_) async => {});
+    when(mockStorage.read(key: anyNamed('key')))
+        .thenAnswer((_) async => null);
+    when(mockStorage.delete(key: anyNamed('key')))
+        .thenAnswer((_) async => {});
+
     container = ProviderContainer(
       overrides: [
         httpClientProvider.overrideWithValue(mockClient),
+        secureStorageProvider.overrideWithValue(mockStorage),
       ],
     );
   });
@@ -31,9 +47,6 @@ void main() {
   });
 
   test('login success updates state with token and role', () async {
-    // This is a dummy JWT payload: {"sub": "test@test.com", "role": "superadmin", "org_id": "org123"}
-    // Header: {"alg": "HS256", "typ": "JWT"}
-    // Base64 encoded payload: eyJzdWIiOiAidGVzdEB0ZXN0LmNvbSIsICJyb2xlIjogInN1cGVyYWRtaW4iLCAib3JnX2lkIjogIm9yZzEyMyJ9
     const dummyToken = "header.eyJzdWIiOiAidGVzdEB0ZXN0LmNvbSIsICJyb2xlIjogInN1cGVyYWRtaW4iLCAib3JnX2lkIjogIm9yZzEyMyJ9.signature";
     
     when(mockClient.post(any, body: anyNamed('body')))
@@ -49,6 +62,8 @@ void main() {
     expect(state.token, dummyToken);
     expect(state.role, 'superadmin');
     expect(state.error, null);
+    
+    verify(mockStorage.write(key: 'jwt_token', value: dummyToken)).called(1);
   });
 
   test('login failure updates state with error', () async {

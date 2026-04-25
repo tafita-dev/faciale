@@ -6,14 +6,14 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import 'auth_state.dart';
 
 final httpClientProvider = Provider((ref) => http.Client());
+final secureStorageProvider = Provider((ref) => const FlutterSecureStorage());
 
 final authProvider = NotifierProvider<AuthNotifier, AuthState>(() {
   return AuthNotifier();
 });
 
 class AuthNotifier extends Notifier<AuthState> {
-  final _storage = const FlutterSecureStorage();
-  final String _baseUrl = 'http://192.168.0.20:4000/api/v1';
+  String get _baseUrl => 'http://192.168.0.20:4000/api/v1';
 
   @override
   AuthState build() {
@@ -25,6 +25,8 @@ class AuthNotifier extends Notifier<AuthState> {
 
     try {
       final client = ref.read(httpClientProvider);
+      final storage = ref.read(secureStorageProvider);
+      
       final response = await client.post(
         Uri.parse('$_baseUrl/auth/login'),
         body: {
@@ -43,9 +45,9 @@ class AuthNotifier extends Notifier<AuthState> {
         final role = decodedToken['role'];
         final orgId = decodedToken['org_id'];
 
-        await _storage.write(key: 'jwt_token', value: token);
-        if (role != null) await _storage.write(key: 'user_role', value: role);
-        if (orgId != null) await _storage.write(key: 'org_id', value: orgId);
+        await storage.write(key: 'jwt_token', value: token);
+        if (role != null) await storage.write(key: 'user_role', value: role);
+        if (orgId != null) await storage.write(key: 'org_id', value: orgId);
 
         state = state.copyWith(isLoading: false, token: token, role: role);
       } else {
@@ -56,7 +58,7 @@ class AuthNotifier extends Notifier<AuthState> {
         );
       }
     } catch (e) {
-      print( e);
+      print('Login error: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'An unexpected error occurred',
@@ -65,9 +67,10 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
-    await _storage.delete(key: 'jwt_token');
-    await _storage.delete(key: 'user_role');
-    await _storage.delete(key: 'org_id');
+    final storage = ref.read(secureStorageProvider);
+    await storage.delete(key: 'jwt_token');
+    await storage.delete(key: 'user_role');
+    await storage.delete(key: 'org_id');
     state = AuthState();
   }
 }
