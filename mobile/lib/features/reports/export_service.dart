@@ -3,9 +3,10 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ExportService {
-  final String _baseUrl = 'http://192.168.0.20:4000/api/v1'; // Should be in a config
+  String get _baseUrl => dotenv.env['API_URL'] ?? 'http://localhost:8000/api/v1';
   final _storage = const FlutterSecureStorage();
 
   Future<void> exportAttendanceLogs() async {

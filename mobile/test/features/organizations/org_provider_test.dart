@@ -5,6 +5,7 @@ import 'package:faciale/features/organizations/org_provider.dart';
 import 'package:faciale/features/organizations/org_model.dart';
 import 'package:faciale/features/auth/auth_provider.dart';
 import 'package:faciale/features/auth/auth_state.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mockito/mockito.dart';
 import 'package:http/http.dart' as http;
 import '../auth/auth_provider_test.mocks.dart';
@@ -28,6 +29,7 @@ void main() {
   late ProviderContainer container;
 
   setUp(() {
+    dotenv.testLoad(fileInput: 'API_URL=http://localhost:8000/api/v1');
     mockClient = MockClient();
     container = ProviderContainer(
       overrides: [

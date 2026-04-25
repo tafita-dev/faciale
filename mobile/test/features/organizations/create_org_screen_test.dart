@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:faciale/features/organizations/create_org_screen.dart';
 import 'package:faciale/features/auth/auth_provider.dart';
 import 'package:faciale/features/auth/auth_state.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mockito/mockito.dart';
 import 'package:http/http.dart' as http;
 import 'package:go_router/go_router.dart';
@@ -28,6 +29,7 @@ void main() {
   late MockClient mockClient;
 
   setUp(() {
+    dotenv.testLoad(fileInput: 'API_URL=http://localhost:8000/api/v1');
     mockClient = MockClient();
   });
 
@@ -106,7 +108,7 @@ void main() {
     expect(find.text('Dashboard'), findsOneWidget);
     
     verify(mockClient.post(
-      Uri.parse('http://192.168.0.20:4000/api/v1/orgs/'),
+      Uri.parse('http://localhost:8000/api/v1/orgs/'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer test_token',

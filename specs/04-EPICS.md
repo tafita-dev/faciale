@@ -43,3 +43,9 @@
 - **Goal:** Enable the global management of Organizations and verify the end-to-end system flow.
 - **Status:** DONE (stories generated)
 - **Ref:** @specs/01-PRD.md#feature-multi-level-user-management
+
+## [Epic 8] Security & System Polish
+
+- **Goal:** Implement biometric data encryption at rest, Super Admin statistics, and PDF reporting.
+- **Status:** BACKLOG
+- **Ref:** @specs/01-PRD.md#non-functional-requirements

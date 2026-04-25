@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:faciale/features/auth/auth_provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:http/http.dart' as http;
@@ -16,6 +17,7 @@ void main() {
   late ProviderContainer container;
 
   setUp(() {
+    dotenv.testLoad(fileInput: 'API_URL=http://localhost:8000/api/v1');
     mockClient = MockClient();
     mockStorage = MockFlutterSecureStorage();
     

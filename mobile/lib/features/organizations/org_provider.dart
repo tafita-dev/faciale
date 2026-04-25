@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../auth/auth_provider.dart';
 import 'org_model.dart';
 
@@ -40,7 +41,7 @@ final orgProvider = NotifierProvider<OrgNotifier, OrgState>(() {
 });
 
 class OrgNotifier extends Notifier<OrgState> {
-  String get _baseUrl => 'http://192.168.0.20:4000/api/v1';
+  String get _baseUrl => dotenv.env['API_URL'] ?? 'http://localhost:8000/api/v1';
 
   @override
   OrgState build() {
