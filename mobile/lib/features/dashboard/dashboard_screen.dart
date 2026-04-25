@@ -29,6 +29,7 @@ class DashboardScreen extends ConsumerWidget {
                     title: 'Active Organizations',
                     value: state.totalOrganizations.toString(),
                     color: AppColors.primary,
+                    onTap: () => context.push('/admin/orgs'),
                   ),
                   const SizedBox(width: 12),
                   _SummaryCard(
@@ -155,43 +156,49 @@ class _SummaryCard extends StatelessWidget {
   final String value;
   final Color color;
   final bool isFullWidth;
+  final VoidCallback? onTap;
 
   const _SummaryCard({
     required this.title,
     required this.value,
     required this.color,
     this.isFullWidth = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final card = Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: AppColors.accent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-              fontWeight: FontWeight.w500,
+    final card = InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: AppColors.accent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
 

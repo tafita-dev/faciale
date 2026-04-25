@@ -9,6 +9,7 @@ import '../attendance/scanner_screen.dart';
 import '../auth/login_screen.dart';
 import '../employees/enroll_screen.dart';
 import '../organizations/create_org_screen.dart';
+import '../organizations/org_list_screen.dart';
 import 'navigation_shell.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -31,6 +32,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/org/create',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const CreateOrgScreen(),
+      ),
+      GoRoute(
+        path: '/admin/orgs',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const OrgListScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {

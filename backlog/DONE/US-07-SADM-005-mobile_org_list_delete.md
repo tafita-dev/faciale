@@ -1,7 +1,7 @@
 ---
 id: US-07-SADM-005
 title: Mobile UI for Organization Listing and Management
-status: READY
+status: DONE
 type: feature
 ---
 # Description
