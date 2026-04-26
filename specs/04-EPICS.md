@@ -41,11 +41,17 @@
 ## [Epic 7] Super Admin & System Onboarding
 
 - **Goal:** Enable the global management of Organizations and verify the end-to-end system flow.
-- **Status:** DONE (stories generated)
+- **Status:** DONE
 - **Ref:** @specs/01-PRD.md#feature-multi-level-user-management
 
 ## [Epic 8] Security & System Polish
 
 - **Goal:** Implement biometric data encryption at rest, Super Admin statistics, and PDF reporting.
+- **Status:** DONE
+- **Ref:** @specs/01-PRD.md#non-functional-requirements
+
+## [Epic 9] Performance & Production Readiness
+
+- **Goal:** Verify non-functional requirements and implement maintenance features.
 - **Status:** BACKLOG
 - **Ref:** @specs/01-PRD.md#non-functional-requirements

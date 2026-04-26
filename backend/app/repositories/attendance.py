@@ -179,11 +179,22 @@ class AttendanceRepository:
         
         return items, total
 
-    async def get_logs_cursor(self, org_id: str, user_id: Optional[str] = None):
+    async def get_logs_cursor(self, org_id: str, user_id: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None):
         match_query = {"org_id": org_id}
         if user_id:
             match_query["user_id"] = user_id
             
+        if start_date or end_date:
+            timestamp_filter = {}
+            if start_date:
+                timestamp_filter["$gte"] = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+            if end_date:
+                if len(end_date) <= 10:
+                    timestamp_filter["$lte"] = datetime.fromisoformat(f"{end_date}T23:59:59.999Z".replace("Z", "+00:00"))
+                else:
+                    timestamp_filter["$lte"] = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+            match_query["timestamp"] = timestamp_filter
+
         pipeline = [
             {"$match": match_query},
             {

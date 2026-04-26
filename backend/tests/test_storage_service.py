@@ -4,21 +4,19 @@ import os
 import stat
 from unittest.mock import MagicMock, AsyncMock, patch
 from cryptography.fernet import Fernet
-from app.services.storage import StorageService, StorageServiceError, InvalidImageError, initialize_fernet
+from app.services.storage import StorageService, StorageServiceError, InvalidImageError
+from app.core.security import decrypt_data
+from app.core.config import settings
 
 @pytest.fixture(autouse=True)
 def setup_encryption(monkeypatch):
     """Fixture to set up encryption for tests."""
     encryption_key = Fernet.generate_key().decode()
-    mock_settings = MagicMock()
-    mock_settings.UPLOAD_DIR = "/tmp/enrollments"
-    mock_settings.ENCRYPTION_KEY = encryption_key
-    monkeypatch.setattr("app.services.storage.settings", mock_settings)
-    initialize_fernet()
+    monkeypatch.setattr(settings, "ENCRYPTION_KEY", encryption_key)
+    # We need to clear the cached _fernet in app.core.security
+    import app.core.security
+    app.core.security._fernet = None
     yield encryption_key
-    # Reset fernet after tests
-    monkeypatch.setattr("app.services.storage.settings.ENCRYPTION_KEY", None)
-    initialize_fernet()
 
 @pytest.mark.asyncio
 async def test_save_enrollment_photo_creates_dir_with_correct_permissions(tmp_path, setup_encryption):
@@ -51,8 +49,10 @@ async def test_save_enrollment_photo_creates_dir_with_correct_permissions(tmp_pa
     assert saved_content != file_content
     
     # Decrypt to verify
-    f = Fernet(setup_encryption.encode())
-    assert f.decrypt(saved_content) == file_content
+    decrypted = decrypt_data(saved_content.decode())
+    if isinstance(decrypted, str):
+        decrypted = decrypted.encode()
+    assert decrypted == file_content
     
     # Check unique filename (UUID)
     assert path.name != filename
@@ -81,7 +81,7 @@ async def test_save_enrollment_photo_handles_empty_file(tmp_path):
         await storage_service.save_enrollment_photo(mock_file)
 
 @pytest.mark.asyncio
-async def test_save_enrollment_photo_handles_write_error(tmp_path, monkeypatch):
+async def test_save_enrollment_photo_handles_write_error(tmp_path, setup_encryption):
     storage_service = StorageService(upload_dir=str(tmp_path))
     
     mock_file = MagicMock()
@@ -90,13 +90,15 @@ async def test_save_enrollment_photo_handles_write_error(tmp_path, monkeypatch):
     
     # Mock aiofiles.open to raise OSError
     with patch("aiofiles.open", side_effect=OSError("Disk full")):
-        with pytest.raises(StorageServiceError, match="Failed to save encrypted file"):
+        with pytest.raises(StorageServiceError, match="An unexpected error occurred while saving the file"):
             await storage_service.save_enrollment_photo(mock_file)
 
 @pytest.mark.asyncio
 async def test_save_enrollment_photo_missing_encryption(monkeypatch):
-    # Force fernet to None
-    monkeypatch.setattr("app.services.storage.fernet", None)
+    # Force ENCRYPTION_KEY to None
+    monkeypatch.setattr(settings, "ENCRYPTION_KEY", None)
+    import app.core.security
+    app.core.security._fernet = None
     
     storage_service = StorageService(upload_dir="/tmp/test")
     
@@ -104,5 +106,28 @@ async def test_save_enrollment_photo_missing_encryption(monkeypatch):
     mock_file.read = AsyncMock(return_value=b"data")
     mock_file.filename = "test.jpg"
     
-    with pytest.raises(StorageServiceError, match="Encryption is not configured"):
+    with pytest.raises(StorageServiceError, match="ENCRYPTION_KEY is not set in settings"):
         await storage_service.save_enrollment_photo(mock_file)
+
+@pytest.mark.asyncio
+async def test_get_enrollment_photo_success(tmp_path, setup_encryption):
+    upload_dir = tmp_path / "enrollments"
+    storage_service = StorageService(upload_dir=str(upload_dir))
+    
+    file_content = b"original content"
+    mock_file = MagicMock()
+    mock_file.read = AsyncMock(return_value=file_content)
+    mock_file.filename = "test.jpg"
+    
+    saved_path = await storage_service.save_enrollment_photo(mock_file)
+    
+    # Retrieve and decrypt
+    retrieved_content = await storage_service.get_enrollment_photo(saved_path)
+    assert retrieved_content == file_content
+
+@pytest.mark.asyncio
+async def test_get_enrollment_photo_not_found(tmp_path):
+    storage_service = StorageService(upload_dir=str(tmp_path))
+    with pytest.raises(StorageServiceError, match="File not found"):
+        await storage_service.get_enrollment_photo("/non/existent/path.jpg")
+

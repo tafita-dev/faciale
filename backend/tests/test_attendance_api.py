@@ -11,9 +11,9 @@ client = TestClient(app)
 def mock_user():
     return {
         "_id": "user123",
-        "email": "scanner@org.com",
+        "email": "user@org.com",
         "org_id": "org_a",
-        "role": "scanner"
+        "role": "user"
     }
 
 @pytest.fixture

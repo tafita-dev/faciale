@@ -83,4 +83,59 @@ void main() {
     expect(state.role, null);
     expect(state.error, 'Invalid credentials');
   });
+
+  test('login server error updates state with server error message', () async {
+    when(mockClient.post(any, body: anyNamed('body')))
+        .thenAnswer((_) async => http.Response(
+              'Internal Server Error',
+              500,
+            ));
+
+    await container.read(authProvider.notifier).login('test@test.com', 'password');
+
+    final state = container.read(authProvider);
+    expect(state.isLoading, false);
+    expect(state.error, 'Server error. Please try again later.');
+  });
+
+  test('login network error updates state with network error message', () async {
+    when(mockClient.post(any, body: anyNamed('body')))
+        .thenThrow(Exception('No internet'));
+
+    await container.read(authProvider.notifier).login('test@test.com', 'password');
+
+    final state = container.read(authProvider);
+    expect(state.isLoading, false);
+    expect(state.error, 'Network error. Please check your connection.');
+  });
+
+  test('requestPasswordReset success', () async {
+    when(mockClient.post(any, headers: anyNamed('headers'), body: anyNamed('body')))
+        .thenAnswer((_) async => http.Response(
+              jsonEncode({'msg': 'success'}),
+              200,
+            ));
+
+    await container.read(authProvider.notifier).requestPasswordReset('test@test.com');
+
+    final state = container.read(authProvider);
+    expect(state.isLoading, false);
+    expect(state.isSuccess, true);
+    expect(state.error, null);
+  });
+
+  test('confirmPasswordReset success', () async {
+    when(mockClient.post(any, headers: anyNamed('headers'), body: anyNamed('body')))
+        .thenAnswer((_) async => http.Response(
+              jsonEncode({'msg': 'success'}),
+              200,
+            ));
+
+    await container.read(authProvider.notifier).confirmPasswordReset('token', 'newpassword');
+
+    final state = container.read(authProvider);
+    expect(state.isLoading, false);
+    expect(state.isSuccess, true);
+    expect(state.error, null);
+  });
 }

@@ -58,13 +58,13 @@ async def test_get_logs_service():
         dept_id=None,
         user_id=None
     )
+
 @pytest.mark.asyncio
 async def test_get_system_stats():
     mock_attendance_repo = AsyncMock()
     mock_employee_repo = AsyncMock()
     mock_org_repo = AsyncMock()
     
-    # We'll need to update ReportingService to accept org_repo
     service = ReportingService(
         attendance_repo=mock_attendance_repo,
         employee_repo=mock_employee_repo,
@@ -72,13 +72,15 @@ async def test_get_system_stats():
     )
     
     mock_org_repo.count_all.return_value = 5
+    mock_employee_repo.count_all.return_value = 100
     
     stats = await service.get_system_stats()
     
     assert stats["total_organizations"] == 5
-    assert "total_users" not in stats
+    assert stats["total_users"] == 100
     
     mock_org_repo.count_all.assert_called_once()
+    mock_employee_repo.count_all.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_get_today_stats_no_data():
@@ -103,3 +105,41 @@ async def test_get_today_stats_no_data():
     assert stats["late"] == 0
     assert stats["absent"] == 0
     assert stats["total"] == 0
+
+@pytest.mark.asyncio
+async def test_export_logs_pdf():
+    mock_attendance_repo = AsyncMock()
+    mock_org_repo = AsyncMock()
+    service = ReportingService(
+        attendance_repo=mock_attendance_repo,
+        employee_repo=AsyncMock(),
+        org_repo=mock_org_repo
+    )
+    
+    # Mock org
+    mock_org = MagicMock()
+    mock_org.name = "Test Organization"
+    mock_org_repo.get_org.return_value = mock_org
+    
+    # Mock cursor
+    mock_cursor = AsyncMock()
+    mock_cursor.__aiter__.return_value = [
+        {
+            "timestamp": datetime(2023, 1, 1, 9, 0, tzinfo=timezone.utc),
+            "employee_name": "John Doe",
+            "department_name": "HR",
+            "status": "success",
+            "confidence": 0.95
+        }
+    ]
+    mock_attendance_repo.get_logs_cursor.return_value = mock_cursor
+    
+    generator = await service.export_logs(org_id="org1", format="pdf")
+    
+    chunks = []
+    async for chunk in generator:
+        chunks.append(chunk)
+    
+    pdf_content = b"".join(chunks)
+    assert pdf_content.startswith(b"%PDF")
+    assert len(pdf_content) > 100

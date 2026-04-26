@@ -28,7 +28,9 @@ async def test_upsert_embedding():
     point = points[0]
     assert point.id == expected_id
     assert point.vector == embedding.tolist()
-    assert point.payload == {"employee_id": employee_id, "org_id": org_id}
+    assert point.payload["employee_id"] == employee_id
+    assert point.payload["org_id"] == org_id
+    assert "encrypted_embedding" in point.payload
 
 @pytest.mark.asyncio
 async def test_search_embedding_match():

@@ -18,12 +18,11 @@ class AuthNotifier extends Notifier<AuthState> {
 
   @override
   AuthState build() {
-
     return AuthState();
   }
 
   Future<void> login(String email, String password) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, error: null, isSuccess: false);
 
     try {
       final client = ref.read(httpClientProvider);
@@ -36,13 +35,11 @@ class AuthNotifier extends Notifier<AuthState> {
           'password': password,
         },
       );
-      print('Login response: ${response.statusCode} - ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['access_token'];
         
-        // Decode JWT to get role
         final Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
         final role = decodedToken['role'];
         final orgId = decodedToken['org_id'];
@@ -51,7 +48,12 @@ class AuthNotifier extends Notifier<AuthState> {
         if (role != null) await storage.write(key: 'user_role', value: role);
         if (orgId != null) await storage.write(key: 'org_id', value: orgId);
 
-        state = state.copyWith(isLoading: false, token: token, role: role);
+        state = state.copyWith(isLoading: false, token: token, role: role, isSuccess: true);
+      } else if (response.statusCode >= 500) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Server error. Please try again later.',
+        );
       } else {
         final data = jsonDecode(response.body);
         state = state.copyWith(
@@ -60,10 +62,78 @@ class AuthNotifier extends Notifier<AuthState> {
         );
       }
     } catch (e) {
-      print('Login error: $e');
       state = state.copyWith(
         isLoading: false,
-        error: 'An unexpected error occurred',
+        error: 'Network error. Please check your connection.',
+      );
+    }
+  }
+
+  Future<void> requestPasswordReset(String email) async {
+    state = state.copyWith(isLoading: true, error: null, isSuccess: false);
+
+    try {
+      final client = ref.read(httpClientProvider);
+      final response = await client.post(
+        Uri.parse('$_baseUrl/auth/password-reset-request'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      if (response.statusCode == 200) {
+        state = state.copyWith(isLoading: false, isSuccess: true);
+      } else if (response.statusCode >= 500) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Server error. Please try again later.',
+        );
+      } else {
+        final data = jsonDecode(response.body);
+        state = state.copyWith(
+          isLoading: false,
+          error: data['detail'] ?? 'Failed to complete request',
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Network error. Please check your connection.',
+      );
+    }
+  }
+
+  Future<void> confirmPasswordReset(String token, String newPassword) async {
+    state = state.copyWith(isLoading: true, error: null, isSuccess: false);
+
+    try {
+      final client = ref.read(httpClientProvider);
+      final response = await client.post(
+        Uri.parse('$_baseUrl/auth/password-reset-confirm'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'token': token,
+          'new_password': newPassword,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        state = state.copyWith(isLoading: false, isSuccess: true);
+      } else if (response.statusCode >= 500) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Server error. Please try again later.',
+        );
+      } else {
+        final data = jsonDecode(response.body);
+        state = state.copyWith(
+          isLoading: false,
+          error: data['detail'] ?? 'Failed to reset password',
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Network error. Please check your connection.',
       );
     }
   }
@@ -74,5 +144,9 @@ class AuthNotifier extends Notifier<AuthState> {
     await storage.delete(key: 'user_role');
     await storage.delete(key: 'org_id');
     state = AuthState();
+  }
+
+  void resetStatus() {
+    state = state.copyWith(error: null, isSuccess: false);
   }
 }

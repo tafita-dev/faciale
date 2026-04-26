@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch, AsyncMock
 from fastapi.testclient import TestClient
 from app.main import app
+from app.core import security
 from app.core.security import get_password_hash
 
 client = TestClient(app)
@@ -109,3 +110,83 @@ async def test_read_users_me_success():
 async def test_read_users_me_unauthorized():
     response = client.get("/api/v1/auth/me")
     assert response.status_code == 401
+
+@pytest.mark.asyncio
+async def test_password_reset_request_success():
+    mock_user = {
+        "email": "test@example.com",
+        "name": "Test User"
+    }
+    
+    with patch("app.api.v1.endpoints.auth.get_database") as mock_db:
+        mock_coll = AsyncMock()
+        mock_coll.find_one.return_value = mock_user
+        mock_db.return_value.__getitem__.return_value = mock_coll
+        
+        response = client.post(
+            "/api/v1/auth/password-reset-request",
+            json={"email": "test@example.com"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "msg" in data
+        assert "token" in data
+
+@pytest.mark.asyncio
+async def test_password_reset_request_user_not_found():
+    with patch("app.api.v1.endpoints.auth.get_database") as mock_db:
+        mock_coll = AsyncMock()
+        mock_coll.find_one.return_value = None
+        mock_db.return_value.__getitem__.return_value = mock_coll
+        
+        response = client.post(
+            "/api/v1/auth/password-reset-request",
+            json={"email": "notfound@example.com"}
+        )
+        
+        assert response.status_code == 200
+
+@pytest.mark.asyncio
+async def test_password_reset_confirm_success():
+    token = security.create_access_token(data={"sub": "test@example.com", "purpose": "reset"}, expires_delta=None)
+    mock_user = {
+        "email": "test@example.com",
+        "password_hash": "old_hash"
+    }
+    
+    with patch("app.api.v1.endpoints.auth.get_database") as mock_db:
+        mock_coll = AsyncMock()
+        mock_coll.find_one.return_value = mock_user
+        mock_coll.update_one = AsyncMock()
+        mock_db.return_value.__getitem__.return_value = mock_coll
+        
+        response = client.post(
+            "/api/v1/auth/password-reset-confirm",
+            json={"token": token, "new_password": "newpassword123"}
+        )
+        
+        assert response.status_code == 200
+        assert response.json()["msg"] == "Password reset successfully"
+        assert mock_coll.update_one.called
+
+@pytest.mark.asyncio
+async def test_password_reset_confirm_invalid_token():
+    response = client.post(
+        "/api/v1/auth/password-reset-confirm",
+        json={"token": "invalid_token", "new_password": "newpassword123"}
+    )
+    
+    assert response.status_code == 400
+    assert "Invalid" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_password_reset_confirm_weak_password():
+    token = security.create_access_token(data={"sub": "test@example.com", "purpose": "reset"})
+    
+    response = client.post(
+        "/api/v1/auth/password-reset-confirm",
+        json={"token": token, "new_password": "123"}
+    )
+    
+    assert response.status_code == 422

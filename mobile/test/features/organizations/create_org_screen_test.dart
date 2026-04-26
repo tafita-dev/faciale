@@ -65,8 +65,14 @@ void main() {
 
     expect(find.text('Organization Name'), findsOneWidget);
     expect(find.text('Type'), findsOneWidget);
+    expect(find.text('Admin Full Name'), findsOneWidget);
+    expect(find.text('Admin Email'), findsOneWidget);
+    expect(find.text('Admin Password'), findsOneWidget);
     expect(find.byType(ElevatedButton), findsOneWidget);
-    expect(find.text('Create'), findsOneWidget);
+    expect(find.descendant(
+      of: find.byType(ElevatedButton),
+      matching: find.text('Create Organization'),
+    ), findsOneWidget);
   });
 
   testWidgets('shows validation error when name is empty', (WidgetTester tester) async {
@@ -74,7 +80,7 @@ void main() {
     GoRouter.of(tester.element(find.text('Dashboard'))).push('/create');
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Create'));
+    await tester.tap(find.byType(ElevatedButton));
     await tester.pump();
 
     expect(find.text('Organization name is required'), findsOneWidget);
@@ -99,9 +105,13 @@ void main() {
           201,
         ));
 
-    await tester.enterText(find.byType(TextField), 'Test School');
+    // Fill the form
+    await tester.enterText(find.widgetWithText(TextFormField, 'Organization Name'), 'Test School');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Admin Full Name'), 'Admin Name');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Admin Email'), 'admin@test.com');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Admin Password'), 'password123');
     
-    await tester.tap(find.text('Create'));
+    await tester.tap(find.byType(ElevatedButton));
     await tester.pumpAndSettle();
 
     expect(find.text('Organization created successfully'), findsOneWidget);
@@ -116,6 +126,9 @@ void main() {
       body: jsonEncode({
         'name': 'Test School',
         'type': 'school',
+        'admin_name': 'Admin Name',
+        'admin_email': 'admin@test.com',
+        'admin_password': 'password123',
       }),
     )).called(1);
   });

@@ -64,13 +64,15 @@ async def get_attendance_logs(
 
 @router.get("/export")
 async def export_attendance_logs(
-    format: str = Query("csv", pattern="^csv$"),
+    format: str = Query("csv", pattern="^(csv|pdf)$"),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     user_id: Optional[str] = Query(None),
     current_user: dict = Depends(deps.check_org_user),
     reporting_service: ReportingService = Depends(deps.get_reporting_service)
 ) -> Any:
     """
-    Export attendance logs as CSV.
+    Export attendance logs as CSV or PDF.
     Isolation: admin sees all (or filtered by user_id), user sees only their own.
     """
     if current_user["role"] == "user":
@@ -78,13 +80,20 @@ async def export_attendance_logs(
     else:
         effective_user_id = user_id
         
-    generator = await reporting_service.export_logs(current_user["org_id"], user_id=effective_user_id)
+    generator = await reporting_service.export_logs(
+        current_user["org_id"], 
+        user_id=effective_user_id,
+        format=format,
+        start_date=start_date,
+        end_date=end_date
+    )
     
-    filename = f"attendance_logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    filename = f"attendance_logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{format}"
+    media_type = "text/csv" if format == "csv" else "application/pdf"
     
     return StreamingResponse(
         generator,
-        media_type="text/csv",
+        media_type=media_type,
         headers={
             "Content-Disposition": f"attachment; filename={filename}"
         }

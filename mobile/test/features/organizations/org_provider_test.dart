@@ -22,6 +22,15 @@ class MockAuthNotifier extends Notifier<AuthState> implements AuthNotifier {
   
   @override
   Future<void> logout() async {}
+
+  @override
+  Future<void> confirmPasswordReset(String token, String newPassword) async {}
+
+  @override
+  Future<void> requestPasswordReset(String email) async {}
+
+  @override
+  void resetStatus() {}
 }
 
 void main() {
@@ -78,6 +87,32 @@ void main() {
     expect(state.error, 'Error');
   });
 
+  test('fetchOrgs server error updates state with server error message', () async {
+    when(mockClient.get(
+      any,
+      headers: anyNamed('headers'),
+    )).thenAnswer((_) async => http.Response('Internal Server Error', 500));
+
+    await container.read(orgProvider.notifier).fetchOrgs();
+
+    final state = container.read(orgProvider);
+    expect(state.isLoading, false);
+    expect(state.error, 'Server error. Please try again later.');
+  });
+
+  test('fetchOrgs network error updates state with network error message', () async {
+    when(mockClient.get(
+      any,
+      headers: anyNamed('headers'),
+    )).thenThrow(Exception('No internet'));
+
+    await container.read(orgProvider.notifier).fetchOrgs();
+
+    final state = container.read(orgProvider);
+    expect(state.isLoading, false);
+    expect(state.error, 'Network error. Please check your connection.');
+  });
+
   test('deleteOrganization success updates state and refreshes list', () async {
     when(mockClient.delete(
       any,
@@ -113,5 +148,76 @@ void main() {
     expect(state.isLoading, false);
     expect(state.isDeleteSuccess, false);
     expect(state.error, 'Delete Error');
+  });
+
+  test('createOrg success updates state and refreshes list', () async {
+    when(mockClient.post(
+      any,
+      headers: anyNamed('headers'),
+      body: anyNamed('body'),
+    )).thenAnswer((_) async => http.Response(
+          jsonEncode({
+            '_id': 'org123',
+            'name': 'New Org',
+            'type': 'school',
+            'created_at': DateTime.now().toIso8601String(),
+          }),
+          201,
+        ));
+
+    // fetchOrgs mock for refresh
+    when(mockClient.get(
+      any,
+      headers: anyNamed('headers'),
+    )).thenAnswer((_) async => http.Response('[]', 200));
+
+    await container.read(orgProvider.notifier).createOrg(
+          name: 'New Org',
+          type: 'school',
+          adminName: 'Admin User',
+          adminEmail: 'admin@example.com',
+          adminPassword: 'password123',
+        );
+
+    final state = container.read(orgProvider);
+    expect(state.isLoading, false);
+    expect(state.isSuccess, true);
+    expect(state.error, null);
+
+    verify(mockClient.post(
+      Uri.parse('http://localhost:8000/api/v1/orgs/'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test_token',
+      },
+      body: jsonEncode({
+        'name': 'New Org',
+        'type': 'school',
+        'admin_name': 'Admin User',
+        'admin_email': 'admin@example.com',
+        'admin_password': 'password123',
+      }),
+    )).called(1);
+  });
+
+  test('createOrg failure updates state with error', () async {
+    when(mockClient.post(
+      any,
+      headers: anyNamed('headers'),
+      body: anyNamed('body'),
+    )).thenAnswer((_) async => http.Response(jsonEncode({'detail': 'Creation Error'}), 400));
+
+    await container.read(orgProvider.notifier).createOrg(
+          name: 'New Org',
+          type: 'school',
+          adminName: 'Admin User',
+          adminEmail: 'admin@example.com',
+          adminPassword: 'password123',
+        );
+
+    final state = container.read(orgProvider);
+    expect(state.isLoading, false);
+    expect(state.isSuccess, false);
+    expect(state.error, 'Creation Error');
   });
 }

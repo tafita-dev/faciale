@@ -85,11 +85,24 @@ def mock_recognition():
     mock = MagicMock(spec=RecognitionService)
     mock.extract_embedding.return_value = np.zeros(512)
     mock.decode_image_from_bytes.return_value = np.zeros((100, 100, 3), dtype=np.uint8)
+    mock.process_recognition = AsyncMock(return_value={
+        "success": True,
+        "is_live": True,
+        "match": True,
+        "employee_id": "emp123",
+        "score": 0.95
+    })
     
+    # Save original instance if any
+    old_instance = RecognitionService._instance
     RecognitionService._instance = mock
+    
     with patch("app.services.enrollment.RecognitionService", return_value=mock), \
          patch("app.services.attendance.RecognitionService", return_value=mock):
         yield mock
+    
+    # Reset singleton
+    RecognitionService._instance = old_instance
 
 @pytest.mark.asyncio
 async def test_e2e_onboarding_and_attendance_flow(mock_db, mock_repos, mock_qdrant, mock_recognition):
@@ -125,12 +138,12 @@ async def test_e2e_onboarding_and_attendance_flow(mock_db, mock_repos, mock_qdra
 
     # 3. Simulate Org Admin Login
     from app.core.security import create_access_token
-    org_admin_token = create_access_token(data={"sub": "orgadmin@test.com", "role": "org_admin", "org_id": org_id})
-    org_headers = {"Authorization": f"Bearer {org_admin_token}"}
+    admin_token = create_access_token(data={"sub": "orgadmin@test.com", "role": "admin", "org_id": org_id})
+    org_headers = {"Authorization": f"Bearer {admin_token}"}
     
     mock_db["users"].find_one.return_value = {
         "email": "orgadmin@test.com",
-        "role": "org_admin",
+        "role": "admin",
         "org_id": org_id
     }
 

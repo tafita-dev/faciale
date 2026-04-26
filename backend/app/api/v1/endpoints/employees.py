@@ -10,15 +10,15 @@ from datetime import datetime, timezone
 
 router = APIRouter()
 
-@router.post("/", response_model=Employee, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=Employee, status_code=status.HTTP_201_CREATED, response_model_by_alias=True)
 async def create_employee(
     *,
     db: Any = Depends(get_database),
     employee_in: EmployeeCreate,
-    current_user: dict = Depends(deps.check_org_user)
+    current_user: dict = Depends(deps.check_only_user)
 ) -> Any:
     """
-    Create new employee.
+    Create new employee. Restricted to 'user' role.
     """
     org_id = current_user.get("org_id")
     
@@ -48,7 +48,7 @@ async def create_employee(
     await db["employees"].insert_one(emp_obj)
     return emp_obj
 
-@router.get("/", response_model=List[Employee])
+@router.get("/", response_model=List[Employee], response_model_by_alias=True)
 async def list_employees(
     *,
     db: Any = Depends(get_database),
@@ -57,7 +57,7 @@ async def list_employees(
 ) -> Any:
     """
     List employees for the current organization, optionally filtered by department.
-    Isolation: admin sees all, user sees only their own.
+    Isolation: admin sees all in org, user sees only their own.
     """
     org_id = current_user.get("org_id")
     
@@ -80,20 +80,20 @@ async def enroll_employee(
     db: Any = Depends(get_database),
     employee_id: str,
     file: UploadFile = File(...),
-    current_user: dict = Depends(deps.check_org_user)
+    current_user: dict = Depends(deps.check_only_user)
 ) -> Any:
     """
     Upload a reference photo for an employee and start the enrollment process.
+    Restricted to 'user' role.
     """
     org_id = current_user.get("org_id")
     
-    # 1. Verify employee exists and belongs to the same organization
+    # 1. Verify employee exists and belongs to the same organization and was created by this user
     query = {
         "_id": employee_id,
-        "org_id": org_id
+        "org_id": org_id,
+        "created_by": current_user["_id"]
     }
-    if current_user.get("role") == "user":
-        query["created_by"] = current_user["_id"]
 
     employee = await db["employees"].find_one(query)
     

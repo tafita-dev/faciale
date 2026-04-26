@@ -136,7 +136,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
               ),
               const SizedBox(height: 16),
               TextButton(
-                onPressed: () {},
+                onPressed: () => context.push('/forgot-password'),
                 child: const Text(
                   'Forgot password?',
                   style: TextStyle(

@@ -164,7 +164,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                 if (scannerState.status == ScannerStatus.failure)
                   _buildResultCard(
                     title: 'Failed',
-                    subtitle: scannerState.error ?? 'Try again',
+                    subtitle: _getErrorMessage(scannerState.error),
                     color: Colors.red,
                     icon: Icons.error,
                   ),
@@ -176,6 +176,23 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
         ],
       ),
     );
+  }
+
+  String _getErrorMessage(String? error) {
+    if (error == null) return 'Try again';
+    if (error.contains('Liveness')) {
+      return 'Liveness failed. Please ensure you are a real person and try again.';
+    }
+    if (error.contains('brighter')) {
+      return 'Too dark. Please move to a brighter area.';
+    }
+    if (error.contains('still')) {
+      return 'Please hold still while scanning.';
+    }
+    if (error.contains('Multiple')) {
+      return 'Multiple faces detected. Please scan one person at a time.';
+    }
+    return error;
   }
 
   Widget _buildResultCard({

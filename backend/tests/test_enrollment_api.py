@@ -10,7 +10,7 @@ import io
 client = TestClient(app)
 
 def get_orgadmin_token(org_id="org_a"):
-    return create_access_token({"sub": "orgadmin@example.com", "role": "org_admin", "org_id": org_id})
+    return create_access_token({"sub": "orgadmin@example.com", "role": "admin", "org_id": org_id})
 
 @pytest.fixture
 def mock_db():
@@ -28,14 +28,14 @@ def mock_db():
     app.dependency_overrides.pop(get_database, None)
 
 @pytest.fixture
-def mock_org_admin_user():
-    user = {"email": "orgadmin@example.com", "role": "org_admin", "org_id": "org_a"}
+def mock_admin_user():
+    user = {"email": "orgadmin@example.com", "role": "admin", "org_id": "org_a"}
     app.dependency_overrides[get_current_user] = lambda: user
     yield user
     app.dependency_overrides.pop(get_current_user, None)
 
 @pytest.mark.asyncio
-async def test_enroll_photo_upload_success(mock_db, mock_org_admin_user):
+async def test_enroll_photo_upload_success(mock_db, mock_admin_user):
     token = get_orgadmin_token()
     employee_id = "emp123"
     
@@ -57,7 +57,7 @@ async def test_enroll_photo_upload_success(mock_db, mock_org_admin_user):
         mock_pipeline.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_enroll_photo_upload_unauthorized_org(mock_db, mock_org_admin_user):
+async def test_enroll_photo_upload_unauthorized_org(mock_db, mock_admin_user):
     token = get_orgadmin_token()
     employee_id = "emp_other"
     
@@ -78,7 +78,7 @@ async def test_enroll_photo_upload_unauthorized_org(mock_db, mock_org_admin_user
     mock_db["employees"].find_one.assert_called_once_with({"_id": employee_id, "org_id": "org_a"})
 
 @pytest.mark.asyncio
-async def test_enroll_photo_upload_invalid_file_type(mock_db, mock_org_admin_user):
+async def test_enroll_photo_upload_invalid_file_type(mock_db, mock_admin_user):
     token = get_orgadmin_token()
     employee_id = "emp123"
     
@@ -98,7 +98,7 @@ async def test_enroll_photo_upload_invalid_file_type(mock_db, mock_org_admin_use
     assert response.json()["detail"] == "Invalid file type. Only JPEG and PNG are allowed."
 
 @pytest.mark.asyncio
-async def test_enroll_photo_upload_file_too_large(mock_db, mock_org_admin_user):
+async def test_enroll_photo_upload_file_too_large(mock_db, mock_admin_user):
     token = get_orgadmin_token()
     employee_id = "emp123"
     

@@ -2,6 +2,7 @@ import uuid
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http import models
 from app.db.qdrant import get_qdrant_client
+from app.core.security import encrypt_data, decrypt_data
 import numpy as np
 
 class VectorRepository:
@@ -18,6 +19,11 @@ class VectorRepository:
     async def upsert_embedding(self, employee_id: str, org_id: str, embedding: np.ndarray):
         point_id = self._get_uuid(employee_id)
         
+        # Biometric Encryption at Rest:
+        # Encrypt the embedding vector and store it in the payload.
+        # The vector itself remains unencrypted for Qdrant search.
+        encrypted_embedding = encrypt_data(embedding.tolist())
+        
         await self.client.upsert(
             collection_name=self.collection_name,
             points=[
@@ -26,7 +32,8 @@ class VectorRepository:
                     vector=embedding.tolist(),
                     payload={
                         "employee_id": employee_id,
-                        "org_id": org_id
+                        "org_id": org_id,
+                        "encrypted_embedding": encrypted_embedding
                     }
                 )
             ]
@@ -50,7 +57,14 @@ class VectorRepository:
         if not results:
             return None
             
-        return {
-            "employee_id": results[0].payload["employee_id"],
+        payload = results[0].payload
+        data = {
+            "employee_id": payload["employee_id"],
             "score": results[0].score
         }
+        
+        # Decrypt embedding if present
+        if "encrypted_embedding" in payload:
+            data["embedding"] = decrypt_data(payload["encrypted_embedding"], as_json=True)
+            
+        return data

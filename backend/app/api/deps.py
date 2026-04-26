@@ -94,6 +94,19 @@ async def check_org_user(current_user: dict = Depends(get_current_user)) -> dict
         )
     return current_user
 
+async def check_only_user(current_user: dict = Depends(get_current_user)) -> dict:
+    if current_user.get("role") != "user":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This resource is only accessible by regular users.",
+        )
+    if not current_user.get("org_id"):
+         raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User must belong to an organization",
+        )
+    return current_user
+
 def get_attendance_service(
     recognition_service: RecognitionService = Depends(get_recognition_service),
     attendance_repo: AttendanceRepository = Depends(get_attendance_repository)

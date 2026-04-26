@@ -2,14 +2,14 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.api import deps
 from app.db.mongodb import get_database
-from app.models.org import Org, OrgCreate
+from app.models.org import Org, OrgCreate, OrgUpdate
 from app.core import security
 import uuid
 from datetime import datetime, timezone
 
 router = APIRouter()
 
-@router.post("/", response_model=Org, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=Org, status_code=status.HTTP_201_CREATED, response_model_by_alias=True)
 async def create_org(
     *,
     db: Any = Depends(get_database),
@@ -58,7 +58,7 @@ async def create_org(
 
     return org_obj
 
-@router.get("/", response_model=List[Org])
+@router.get("/", response_model=List[Org], response_model_by_alias=True)
 async def list_orgs(
     *,
     db: Any = Depends(get_database),
@@ -70,6 +70,49 @@ async def list_orgs(
     cursor = db["organizations"].find()
     orgs = await cursor.to_list(length=100)
     return orgs
+
+@router.get("/{org_id}", response_model=Org, response_model_by_alias=True)
+async def get_org(
+    *,
+    db: Any = Depends(get_database),
+    org_id: str,
+    current_user: dict = Depends(deps.check_superadmin)
+) -> Any:
+    """
+    Get organization details.
+    """
+    org = await db["organizations"].find_one({"_id": org_id})
+    if not org:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found",
+        )
+    return org
+
+@router.patch("/{org_id}", response_model=Org, response_model_by_alias=True)
+async def update_org(
+    *,
+    db: Any = Depends(get_database),
+    org_id: str,
+    org_in: OrgUpdate,
+    current_user: dict = Depends(deps.check_superadmin)
+) -> Any:
+    """
+    Update an organization.
+    """
+    org = await db["organizations"].find_one({"_id": org_id})
+    if not org:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found",
+        )
+    
+    update_data = org_in.model_dump(exclude_unset=True)
+    if update_data:
+        await db["organizations"].update_one({"_id": org_id}, {"$set": update_data})
+    
+    updated_org = await db["organizations"].find_one({"_id": org_id})
+    return updated_org
 
 @router.delete("/{org_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_org(

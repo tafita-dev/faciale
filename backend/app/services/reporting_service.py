@@ -1,8 +1,13 @@
+import io
 from app.repositories.attendance import AttendanceRepository
 from app.repositories.employee import EmployeeRepository
 from app.repositories.org import OrgRepository
 from datetime import datetime, time, timezone
 from typing import Optional
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
 
 class ReportingService:
     def __init__(
@@ -16,9 +21,17 @@ class ReportingService:
         self.org_repo = org_repo or OrgRepository()
 
     async def get_system_stats(self) -> dict:
+        db = self.org_repo.collection.database
         total_organizations = await self.org_repo.count_all()
+        total_admins = await db["users"].count_documents({"role": "admin"})
+        total_users = await db["users"].count_documents({"role": "user"})
+        total_employees = await self.employee_repo.collection.count_documents({})
+        
         return {
-            "total_organizations": total_organizations
+            "total_organizations": total_organizations,
+            "total_admins": total_admins,
+            "total_users": total_users,
+            "total_employees": total_employees
         }
 
     async def get_today_stats(self, org_id: str, user_id: Optional[str] = None) -> dict:
@@ -30,11 +43,15 @@ class ReportingService:
         late_threshold_time = time(9, 0)
         late_threshold = datetime.combine(now.date(), late_threshold_time).replace(tzinfo=timezone.utc)
 
+        # Additional stats for Admin
+        db = self.employee_repo.collection.database
+        org_users_count = 0
+        if not user_id:
+            org_users_count = await db["users"].count_documents({"org_id": org_id, "role": "user"})
+
         # Get total employees in org (isolated if user_id provided)
         if user_id:
-            # For a user, we only care about THEIR employees?
-            # Prompt says: "Voit uniquement : ses propres salariés"
-            # So total should be their own employees
+            # For a user, we only care about THEIR employees
             total_employees = await self.employee_repo.collection.count_documents({"org_id": org_id, "created_by": user_id})
         else:
             total_employees = await self.employee_repo.count_employees(org_id)
@@ -46,12 +63,18 @@ class ReportingService:
         late = stats.get("late", 0)
         absent = max(0, total_employees - present)
 
-        return {
+        result = {
             "present": present,
             "late": late,
             "absent": absent,
-            "total": total_employees
+            "total_employees": total_employees,
+            "attendance_rate": (present / total_employees * 100) if total_employees > 0 else 0
         }
+        
+        if not user_id:
+            result["total_users"] = org_users_count
+            
+        return result
 
     async def get_logs(
         self,
@@ -81,18 +104,77 @@ class ReportingService:
             "size": size
         }
 
-    async def export_logs(self, org_id: str, user_id: Optional[str] = None):
-        cursor = await self.attendance_repo.get_logs_cursor(org_id, user_id=user_id)
+    async def export_logs(self, org_id: str, user_id: Optional[str] = None, format: str = "csv", start_date: Optional[str] = None, end_date: Optional[str] = None):
+        cursor = await self.attendance_repo.get_logs_cursor(org_id, user_id=user_id, start_date=start_date, end_date=end_date)
         
-        async def generate():
-            yield "Date,Time,Employee Name,Department,Status,Confidence Score\n"
+        if format == "csv":
+            async def generate_csv():
+                yield "Date,Time,Employee Name,Department,Status,Confidence Score\n"
+                async for doc in cursor:
+                    ts = doc["timestamp"]
+                    date_str = ts.strftime("%Y-%m-%d")
+                    time_str = ts.strftime("%H:%M:%S")
+                    line = f"{date_str},{time_str},{doc['employee_name']},{doc['department_name']},{doc['status']},{doc['confidence']}\n"
+                    yield line
+            return generate_csv()
+        
+        elif format == "pdf":
+            # Fetch Org info for header
+            org = await self.org_repo.get_org(org_id)
+            org_name = org.name if org else "Faciale Organization"
+            
+            data = [["Date", "Time", "Employee Name", "Department", "Status", "Score"]]
             async for doc in cursor:
                 ts = doc["timestamp"]
-                # Assuming ts is a datetime object
-                date_str = ts.strftime("%Y-%m-%d")
-                time_str = ts.strftime("%H:%M:%S")
+                data.append([
+                    ts.strftime("%Y-%m-%d"),
+                    ts.strftime("%H:%M:%S"),
+                    doc["employee_name"],
+                    doc["department_name"],
+                    doc["status"],
+                    f"{doc['confidence']:.2f}"
+                ])
+            
+            def generate_pdf():
+                buffer = io.BytesIO()
+                doc = SimpleDocTemplate(buffer, pagesize=letter)
+                elements = []
                 
-                line = f"{date_str},{time_str},{doc['employee_name']},{doc['department_name']},{doc['status']},{doc['confidence']}\n"
-                yield line
+                styles = getSampleStyleSheet()
+                elements.append(Paragraph(f"Attendance Report: {org_name}", styles['Title']))
                 
-        return generate()
+                date_range_str = "All Time"
+                if start_date and end_date:
+                    date_range_str = f"From {start_date} To {end_date}"
+                elif start_date:
+                    date_range_str = f"From {start_date}"
+                elif end_date:
+                    date_range_str = f"Until {end_date}"
+                
+                elements.append(Paragraph(f"Period: {date_range_str}", styles['Heading3']))
+                elements.append(Paragraph(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+                elements.append(Spacer(1, 12))
+                
+                # Create Table
+                t = Table(data)
+                t.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.deepskyblue),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 12),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                elements.append(t)
+                
+                doc.build(elements)
+                pdf_data = buffer.getvalue()
+                buffer.close()
+                return pdf_data
+
+            async def stream_pdf():
+                yield generate_pdf()
+            
+            return stream_pdf()

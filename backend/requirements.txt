@@ -43,4 +43,4 @@ pytest-asyncio==0.23.5
 # BUILD TOOLS
 # =========================
 setuptools>=65.0.0
-wheel>=0.40.0
+wheel>=0.40.0reportlab==4.4.10

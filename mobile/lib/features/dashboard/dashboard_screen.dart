@@ -12,10 +12,26 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(dashboardProvider);
     final authState = ref.watch(authProvider);
-    final isSuperAdmin = authState.role == 'superadmin';
+    final role = authState.role;
+    final isSuperAdmin = role == 'superadmin';
+    final isAdmin = role == 'admin';
+    final isUser = role == 'user';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Dashboard')),
+      appBar: AppBar(
+        title: const Text('Dashboard'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await ref.read(authProvider.notifier).logout();
+              if (context.mounted) {
+                context.go('/login');
+              }
+            },
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
         child: ListView(
@@ -26,34 +42,26 @@ class DashboardScreen extends ConsumerWidget {
               Row(
                 children: [
                   _SummaryCard(
-                    title: 'Active Organizations',
+                    title: 'Organizations',
                     value: state.totalOrganizations.toString(),
                     color: AppColors.primary,
                     onTap: () => context.push('/admin/orgs'),
                   ),
                   const SizedBox(width: 12),
                   _SummaryCard(
-                    title: 'System Health',
-                    value: state.systemHealth,
+                    title: 'Total Admins',
+                    value: state.totalAdmins.toString(),
                     color: AppColors.success,
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              _SummaryCard(
-                title: 'Total Users',
-                value: state.totalUsers.toString(),
-                color: AppColors.primary,
-                isFullWidth: true,
-              ),
-            ] else ...[
-              // Org Admin Summary Cards
               Row(
                 children: [
                   _SummaryCard(
-                    title: 'Present Today',
-                    value: state.presentToday.toString(),
-                    color: AppColors.success,
+                    title: 'Total Users',
+                    value: state.totalUsers.toString(),
+                    color: AppColors.accent,
                   ),
                   const SizedBox(width: 12),
                   _SummaryCard(
@@ -63,34 +71,67 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+            ] else ...[
+              // Org Admin / User Summary Cards
+              Row(
+                children: [
+                  _SummaryCard(
+                    title: 'Present Today',
+                    value: state.presentToday.toString(),
+                    color: AppColors.success,
+                  ),
+                  const SizedBox(width: 12),
+                  _SummaryCard(
+                    title: isUser ? 'My Employees' : 'Total Employees',
+                    value: state.totalEmployees.toString(),
+                    color: AppColors.primary,
+                    onTap: () => context.go('/employees'),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
-              _SummaryCard(
-                title: 'Late/Absent',
-                value: state.lateAbsent.toString(),
-                color: AppColors.error,
-                isFullWidth: true,
+              Row(
+                children: [
+                  _SummaryCard(
+                    title: 'Late/Absent',
+                    value: state.lateAbsent.toString(),
+                    color: AppColors.error,
+                  ),
+                  if (isAdmin) ...[
+                    const SizedBox(width: 12),
+                    _SummaryCard(
+                      title: 'Total Users',
+                      value: state.totalUsers.toString(),
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 24),
               Text(
-                'Recent Check-ins',
+                isUser ? 'My Recent Recordings' : 'Recent Check-ins (All)',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
               ),
               const SizedBox(height: 12),
               // Real-time Feed
-              ...state.recentCheckIns.map((entry) {
-                return ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: AppColors.accent,
-                    child: Icon(Icons.person, color: AppColors.primary),
-                  ),
-                  title: Text(entry.employeeName),
-                  subtitle: Text(entry.timestamp),
-                  trailing:
-                      const Icon(Icons.check_circle, color: AppColors.success),
-                );
-              }),
+              if (state.recentCheckIns.isEmpty)
+                const Center(child: Text('No recent activity'))
+              else
+                ...state.recentCheckIns.map((entry) {
+                  return ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: AppColors.accent,
+                      child: Icon(Icons.person, color: AppColors.primary),
+                    ),
+                    title: Text(entry.employeeName),
+                    subtitle: Text('${entry.timestamp} - ${entry.status}'),
+                    trailing: entry.status == 'success'
+                        ? const Icon(Icons.check_circle, color: AppColors.success)
+                        : const Icon(Icons.error, color: AppColors.error),
+                  );
+                }),
             ],
           ],
         ),
@@ -98,14 +139,18 @@ class DashboardScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primary,
         onPressed: () {
-          _showQuickActions(context, isSuperAdmin);
+          _showQuickActions(context, role);
         },
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  void _showQuickActions(BuildContext context, bool isSuperAdmin) {
+  void _showQuickActions(BuildContext context, String? role) {
+    final isSuperAdmin = role == 'superadmin';
+    final isAdmin = role == 'admin';
+    final isUser = role == 'user';
+
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -124,24 +169,36 @@ class DashboardScreen extends ConsumerWidget {
                   },
                 )
               else ...[
-                ListTile(
-                  leading: const Icon(Icons.qr_code_scanner,
-                      color: AppColors.primary),
-                  title: const Text('Quick Scan'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.push('/scanner');
-                  },
-                ),
-                ListTile(
-                  leading:
-                      const Icon(Icons.person_add, color: AppColors.primary),
-                  title: const Text('Add Employee'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.push('/enroll');
-                  },
-                ),
+                if (isUser) ...[
+                  ListTile(
+                    leading: const Icon(Icons.qr_code_scanner,
+                        color: AppColors.primary),
+                    title: const Text('Quick Scan (Pointage)'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/scanner');
+                    },
+                  ),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.person_add, color: AppColors.primary),
+                    title: const Text('Add Employee'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/enroll');
+                    },
+                  ),
+                ],
+                if (isAdmin)
+                  ListTile(
+                    leading:
+                        const Icon(Icons.person_add, color: AppColors.primary),
+                    title: const Text('Create User'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/admin/user/create');
+                    },
+                  ),
               ],
             ],
           ),

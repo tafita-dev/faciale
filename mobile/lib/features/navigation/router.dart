@@ -7,6 +7,8 @@ import '../reports/reports_screen.dart';
 import '../profile/profile_screen.dart';
 import '../attendance/scanner_screen.dart';
 import '../auth/login_screen.dart';
+import '../auth/forgot_password_screen.dart';
+import '../auth/create_user_screen.dart';
 import '../employees/enroll_screen.dart';
 import '../organizations/create_org_screen.dart';
 import '../organizations/org_list_screen.dart';
@@ -24,6 +26,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
         path: '/enroll',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const EnrollScreen(),
@@ -37,6 +43,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/orgs',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const OrgListScreen(),
+      ),
+      GoRoute(
+        path: '/admin/user/create',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const CreateUserScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {

@@ -93,3 +93,49 @@ class RecognitionService:
             "employee_id": None,
             "score": result["score"] if result else 0.0
         }
+
+    async def process_recognition(self, org_id: str, img_bytes: bytes) -> dict:
+        """
+        Perform end-to-end recognition:
+        1. Decode image
+        2. Detect face and extract embedding (single pass)
+        3. Verify liveness
+        4. Match face in vector DB
+        """
+        # 1. Decode image
+        img = self.decode_image_from_bytes(img_bytes)
+        
+        # 2. Detect face and extract embedding
+        faces = self.app.get(img)
+        if len(faces) == 0:
+            raise ValueError("No face detected")
+        if len(faces) > 1:
+            raise ValueError("Multiple faces detected")
+        
+        face = faces[0]
+        bbox = face.bbox.tolist()
+        embedding = face.embedding
+        
+        # 3. Verify liveness
+        liveness_result = self.liveness_service.is_live(img, bbox)
+        if not liveness_result["is_live"]:
+            return {
+                "success": False,
+                "message": "Liveness check failed",
+                "is_live": False,
+                "match": False,
+                "employee_id": None,
+                "score": 0.0
+            }
+        
+        # 4. Match face
+        match_result = await self.match_face(org_id, embedding)
+        
+        return {
+            "success": match_result["match"],
+            "message": "Success" if match_result["match"] else "No match found",
+            "is_live": True,
+            "match": match_result["match"],
+            "employee_id": match_result["employee_id"],
+            "score": match_result["score"]
+        }

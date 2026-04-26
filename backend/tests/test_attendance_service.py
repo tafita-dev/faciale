@@ -11,6 +11,7 @@ def attendance_service():
         mock_recognition = MockRecognition.return_value
         mock_repo = MockRepo.return_value
         mock_repo.create_log = AsyncMock()
+        mock_repo.find_open_log = AsyncMock(return_value=None)
         service = AttendanceService(recognition_service=mock_recognition, attendance_repo=mock_repo)
         return service, mock_recognition, mock_repo
 
@@ -20,12 +21,15 @@ async def test_process_attendance_success(attendance_service):
     
     org_id = "org_a"
     img_bytes = b"fake_image"
-    embedding = np.random.rand(512).astype(np.float32)
     
     # Scenario 1: Successful match
-    mock_recognition.verify_liveness = AsyncMock(return_value={"is_live": True, "score": 0.99})
-    mock_recognition.extract_embedding = MagicMock(return_value=embedding)
-    mock_recognition.match_face = AsyncMock(return_value={"match": True, "employee_id": "emp123", "score": 0.95})
+    mock_recognition.process_recognition = AsyncMock(return_value={
+        "success": True,
+        "is_live": True,
+        "match": True,
+        "employee_id": "emp123",
+        "score": 0.95
+    })
     
     result = await service.process_attendance(org_id, img_bytes)
     
@@ -47,12 +51,15 @@ async def test_process_attendance_no_match(attendance_service):
     
     org_id = "org_a"
     img_bytes = b"fake_image"
-    embedding = np.random.rand(512).astype(np.float32)
     
     # Scenario 2: Failed match
-    mock_recognition.verify_liveness = AsyncMock(return_value={"is_live": True, "score": 0.99})
-    mock_recognition.extract_embedding = MagicMock(return_value=embedding)
-    mock_recognition.match_face = AsyncMock(return_value={"match": False, "employee_id": None, "score": 0.70})
+    mock_recognition.process_recognition = AsyncMock(return_value={
+        "success": False,
+        "is_live": True,
+        "match": False,
+        "employee_id": None,
+        "score": 0.70
+    })
     
     result = await service.process_attendance(org_id, img_bytes)
     
@@ -77,7 +84,13 @@ async def test_process_attendance_spoof(attendance_service):
     img_bytes = b"fake_image"
     
     # Scenario 3: Spoof detected
-    mock_recognition.verify_liveness = AsyncMock(return_value={"is_live": False, "score": 0.10})
+    mock_recognition.process_recognition = AsyncMock(return_value={
+        "success": False,
+        "is_live": False,
+        "match": False,
+        "employee_id": None,
+        "score": 0.10
+    })
     
     result = await service.process_attendance(org_id, img_bytes)
     

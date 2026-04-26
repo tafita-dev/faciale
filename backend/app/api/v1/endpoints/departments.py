@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 router = APIRouter()
 
-@router.post("/", response_model=Department, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=Department, status_code=status.HTTP_201_CREATED, response_model_by_alias=True)
 async def create_department(
     *,
     db: Any = Depends(get_database),
@@ -40,7 +40,7 @@ async def create_department(
     await db["departments"].insert_one(dept_obj)
     return dept_obj
 
-@router.get("/", response_model=List[Department])
+@router.get("/", response_model=List[Department], response_model_by_alias=True)
 async def list_departments(
     *,
     db: Any = Depends(get_database),

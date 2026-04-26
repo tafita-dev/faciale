@@ -9,7 +9,7 @@ from app.api.deps import get_current_user
 client = TestClient(app)
 
 def get_orgadmin_token(org_id="org_a"):
-    return create_access_token({"sub": "orgadmin@example.com", "role": "org_admin", "org_id": org_id})
+    return create_access_token({"sub": "orgadmin@example.com", "role": "admin", "org_id": org_id})
 
 @pytest.fixture
 def mock_db():
@@ -27,14 +27,14 @@ def mock_db():
     app.dependency_overrides.pop(get_database, None)
 
 @pytest.fixture
-def mock_org_admin_user():
-    user = {"email": "orgadmin@example.com", "role": "org_admin", "org_id": "org_a"}
+def mock_admin_user():
+    user = {"email": "orgadmin@example.com", "role": "admin", "org_id": "org_a"}
     app.dependency_overrides[get_current_user] = lambda: user
     yield user
     app.dependency_overrides.pop(get_current_user, None)
 
 @pytest.mark.asyncio
-async def test_create_department_success(mock_db, mock_org_admin_user):
+async def test_create_department_success(mock_db, mock_admin_user):
     token = get_orgadmin_token()
     
     mock_db["departments"].find_one.return_value = None
@@ -52,7 +52,7 @@ async def test_create_department_success(mock_db, mock_org_admin_user):
     assert data["org_id"] == "org_a"
 
 @pytest.mark.asyncio
-async def test_list_departments_success(mock_db, mock_org_admin_user):
+async def test_list_departments_success(mock_db, mock_admin_user):
     token = get_orgadmin_token()
     mock_depts = [
         {"_id": "dept1", "name": "Engineering", "org_id": "org_a"},
@@ -77,7 +77,7 @@ async def test_list_departments_success(mock_db, mock_org_admin_user):
     mock_db["departments"].find.assert_called_once_with({"org_id": "org_a"})
 
 @pytest.mark.asyncio
-async def test_list_departments_empty(mock_db, mock_org_admin_user):
+async def test_list_departments_empty(mock_db, mock_admin_user):
     token = get_orgadmin_token()
     
     mock_cursor = MagicMock()
@@ -93,7 +93,7 @@ async def test_list_departments_empty(mock_db, mock_org_admin_user):
     assert response.json() == []
 
 @pytest.mark.asyncio
-async def test_create_department_duplicate(mock_db, mock_org_admin_user):
+async def test_create_department_duplicate(mock_db, mock_admin_user):
     token = get_orgadmin_token()
     
     mock_db["departments"].find_one.return_value = {"_id": "existing", "name": "Engineering", "org_id": "org_a"}
@@ -108,7 +108,7 @@ async def test_create_department_duplicate(mock_db, mock_org_admin_user):
     assert response.json()["detail"] == "Department with this name already exists in your organization."
 
 @pytest.mark.asyncio
-async def test_list_departments_multi_tenancy(mock_db, mock_org_admin_user):
+async def test_list_departments_multi_tenancy(mock_db, mock_admin_user):
     # Org A admin
     token_a = get_orgadmin_token(org_id="org_a")
     
@@ -137,9 +137,9 @@ async def test_list_departments_multi_tenancy(mock_db, mock_org_admin_user):
 @pytest.mark.asyncio
 async def test_create_department_no_org_id(mock_db):
     # User with no org_id (e.g. malformed or different role)
-    user = {"email": "baduser@example.com", "role": "org_admin"} # missing org_id
+    user = {"email": "baduser@example.com", "role": "admin"} # missing org_id
     app.dependency_overrides[get_current_user] = lambda: user
-    token = create_access_token({"sub": "baduser@example.com", "role": "org_admin"})
+    token = create_access_token({"sub": "baduser@example.com", "role": "admin"})
     
     response = client.post(
         "/api/v1/departments/",

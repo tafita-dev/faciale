@@ -3,8 +3,8 @@ import pathlib
 import aiofiles
 import os
 from fastapi import UploadFile
+from app.core.security import encrypt_data
 from app.core.config import settings
-from cryptography.fernet import Fernet, InvalidToken
 
 # Define custom exceptions
 class InvalidImageError(Exception):
@@ -14,48 +14,6 @@ class InvalidImageError(Exception):
 class StorageServiceError(Exception):
     """Custom exception for storage-related errors."""
     pass
-
-# --- Encryption Setup ---
-# Global variable for Fernet instance. It will be initialized based on settings.
-fernet = None
-
-def initialize_fernet():
-    """Initializes the Fernet instance based on settings."""
-    global fernet
-    fernet = None # Reset fernet
-    if hasattr(settings, 'ENCRYPTION_KEY') and settings.ENCRYPTION_KEY:
-        try:
-            key = settings.ENCRYPTION_KEY.encode()
-            fernet = Fernet(key)
-        except (ValueError, TypeError) as e:
-            # Log this in production. For now, print a warning.
-            print(f"Warning: Could not initialize Fernet encryption due to invalid key. Reason: {e}")
-            fernet = None # Ensure fernet remains None if key is invalid
-    # If ENCRYPTION_KEY is not present or empty, fernet remains None.
-
-# Initialize Fernet when the module loads
-initialize_fernet()
-
-def encrypt_data(data: bytes) -> bytes:
-    """Encrypts data using Fernet. Raises StorageServiceError if Fernet is not initialized."""
-    if not fernet:
-        raise StorageServiceError("Encryption is not configured. Cannot encrypt data.")
-    try:
-        return fernet.encrypt(data)
-    except Exception as e:
-        raise StorageServiceError(f"Failed to encrypt data: {e}") from e
-
-# Decryption function (for potential future use, not directly in save_enrollment_photo)
-# def decrypt_data(data: bytes) -> bytes:
-#     """Decrypts data using Fernet. Raises StorageServiceError if Fernet is not initialized or token is invalid."""
-#     if not fernet:
-#         raise StorageServiceError("Encryption is not configured. Cannot decrypt data.")
-#     try:
-#         return fernet.decrypt(data)
-#     except InvalidToken:
-#         raise StorageServiceError("Failed to decrypt data: Invalid token.")
-#     except Exception as e:
-#         raise StorageServiceError(f"Failed to decrypt data: {e}") from e
 
 
 class StorageService:
@@ -67,10 +25,6 @@ class StorageService:
         Saves an enrollment photo securely, encrypting it and storing with restricted permissions.
         Returns the absolute path to the saved file.
         """
-        # Check if Fernet is initialized. If not, raise error immediately as encryption is mandatory.
-        if not fernet:
-            raise StorageServiceError("Encryption is not configured. Cannot save file securely.")
-
         # Ensure directory exists with restricted permissions (0o700)
         if not self.upload_dir.exists():
             try:
@@ -103,16 +57,32 @@ class StorageService:
         # --- Encrypt and Save File ---
         try:
             # Encrypt the content before writing
-            encrypted_contents = encrypt_data(contents)
+            encrypted_contents = encrypt_data(contents).encode()
 
             async with aiofiles.open(file_path, mode='wb') as f:
                 await f.write(encrypted_contents)
-        except StorageServiceError as e: # Catch specific encryption or other storage errors
-            # If encryption fails, or writing fails, it's a StorageServiceError
-            raise e
-        except OSError as e: # Catch file system errors during open/write
-            raise StorageServiceError(f"Failed to save encrypted file: {e}. Disk full or permissions issue?") from e
-        except Exception as e: # Catch any other unexpected errors during write
+        except Exception as e: 
             raise StorageServiceError(f"An unexpected error occurred while saving the file: {e}") from e
 
         return str(file_path.absolute())
+
+    async def get_enrollment_photo(self, file_path: str) -> bytes:
+        """
+        Retrieves and decrypts an enrollment photo.
+        """
+        path = pathlib.Path(file_path)
+        if not path.exists():
+            raise StorageServiceError(f"File not found: {file_path}")
+
+        try:
+            async with aiofiles.open(path, mode='rb') as f:
+                encrypted_contents = await f.read()
+            
+            from app.core.security import decrypt_data
+            decrypted = decrypt_data(encrypted_contents.decode())
+            if isinstance(decrypted, str):
+                return decrypted.encode()
+            return decrypted
+        except Exception as e:
+            raise StorageServiceError(f"Failed to decrypt file {file_path}: {e}") from e
+

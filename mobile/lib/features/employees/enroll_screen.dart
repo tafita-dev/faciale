@@ -1,10 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:camera/camera.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme.dart';
 import 'camera_actions.dart';
+import 'employee_provider.dart';
+import '../organizations/department_provider.dart';
 
 class EnrollScreen extends ConsumerStatefulWidget {
   const EnrollScreen({super.key});
@@ -16,11 +17,16 @@ class EnrollScreen extends ConsumerStatefulWidget {
 class _EnrollScreenState extends ConsumerState<EnrollScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  String? _selectedDept;
+  String? _selectedDeptId;
   String? _imagePath;
-  bool _isLoading = false;
 
-  final List<String> _departments = ['Engineering', 'HR', 'Marketing', 'Sales'];
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => 
+      ref.read(departmentProvider.notifier).fetchDepartments()
+    );
+  }
 
   void _submit() async {
     if (_formKey.currentState!.validate()) {
@@ -34,20 +40,11 @@ class _EnrollScreenState extends ConsumerState<EnrollScreen> {
         return;
       }
 
-      setState(() {
-        _isLoading = true;
-      });
-
-      // Simulating enrollment process
-      await Future.delayed(const Duration(seconds: 2));
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        // Success and redirection to Employee List
-        context.go('/employees');
-      }
+      await ref.read(employeeProvider.notifier).createAndEnrollEmployee(
+        name: _nameController.text,
+        deptId: _selectedDeptId!,
+        imagePath: _imagePath!,
+      );
     }
   }
 
@@ -63,6 +60,29 @@ class _EnrollScreenState extends ConsumerState<EnrollScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final empState = ref.watch(employeeProvider);
+    final deptState = ref.watch(departmentProvider);
+
+    ref.listen(employeeProvider, (previous, next) {
+      if (next.isSuccess) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Employee enrolled successfully'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        ref.read(employeeProvider.notifier).reset();
+        context.go('/employees');
+      } else if (next.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.error!),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(title: const Text('Employee Enrollment')),
       body: Stack(
@@ -88,30 +108,33 @@ class _EnrollScreenState extends ConsumerState<EnrollScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: _selectedDept,
-                    decoration: const InputDecoration(
-                      labelText: 'Department',
-                      border: OutlineInputBorder(),
+                  if (deptState.isLoading)
+                    const Center(child: CircularProgressIndicator())
+                  else
+                    DropdownButtonFormField<String>(
+                      value: _selectedDeptId,
+                      decoration: const InputDecoration(
+                        labelText: 'Department',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: deptState.departments.map((dept) {
+                        return DropdownMenuItem(
+                          value: dept.id,
+                          child: Text(dept.name),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedDeptId = value;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please select department';
+                        }
+                        return null;
+                      },
                     ),
-                    items: _departments.map((dept) {
-                      return DropdownMenuItem(
-                        value: dept,
-                        child: Text(dept),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedDept = value;
-                      });
-                    },
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please select department';
-                      }
-                      return null;
-                    },
-                  ),
                   const SizedBox(height: 24),
                   const Text('Reference Photo', style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
@@ -146,7 +169,7 @@ class _EnrollScreenState extends ConsumerState<EnrollScreen> {
                   ),
                   const SizedBox(height: 32),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _submit,
+                    onPressed: empState.isLoading ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -158,7 +181,7 @@ class _EnrollScreenState extends ConsumerState<EnrollScreen> {
               ),
             ),
           ),
-          if (_isLoading)
+          if (empState.isLoading)
             Container(
               color: Colors.black54,
               child: const Center(
@@ -177,94 +200,6 @@ class _EnrollScreenState extends ConsumerState<EnrollScreen> {
             ),
         ],
       ),
-    );
-  }
-}
-
-class CameraPreviewDialog extends StatefulWidget {
-  final CameraDescription camera;
-
-  const CameraPreviewDialog({super.key, required this.camera});
-
-  @override
-  State<CameraPreviewDialog> createState() => _CameraPreviewDialogState();
-}
-
-class _CameraPreviewDialogState extends State<CameraPreviewDialog> {
-  late CameraController _controller;
-  late Future<void> _initializeControllerFuture;
-  XFile? _capturedFile;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = CameraController(widget.camera, ResolutionPreset.medium);
-    _initializeControllerFuture = _controller.initialize();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Capture Reference Photo'),
-      content: SizedBox(
-        width: double.maxFinite,
-        height: 300,
-        child: _capturedFile == null
-            ? FutureBuilder<void>(
-                future: _initializeControllerFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.done) {
-                    return CameraPreview(_controller);
-                  } else {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                },
-              )
-            : Image.file(File(_capturedFile!.path), fit: BoxFit.cover),
-      ),
-      actions: [
-        if (_capturedFile == null) ...[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await _initializeControllerFuture;
-                final image = await _controller.takePicture();
-                setState(() {
-                  _capturedFile = image;
-                });
-              } catch (e) {
-                debugPrint(e.toString());
-              }
-            },
-            child: const Text('Capture'),
-          ),
-        ] else ...[
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _capturedFile = null;
-              });
-            },
-            child: const Text('Retake'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop(_capturedFile!.path);
-            },
-            child: const Text('Confirm'),
-          ),
-        ],
-      ],
     );
   }
 }

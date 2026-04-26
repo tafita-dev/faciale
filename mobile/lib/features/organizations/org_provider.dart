@@ -66,6 +66,11 @@ class OrgNotifier extends Notifier<OrgState> {
         final List<dynamic> data = jsonDecode(response.body);
         final orgs = data.map((item) => Org.fromJson(item)).toList();
         state = state.copyWith(isLoading: false, orgs: orgs);
+      } else if (response.statusCode >= 500) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Server error. Please try again later.',
+        );
       } else {
         final data = jsonDecode(response.body);
         state = state.copyWith(
@@ -76,12 +81,18 @@ class OrgNotifier extends Notifier<OrgState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: 'An unexpected error occurred',
+        error: 'Network error. Please check your connection.',
       );
     }
   }
 
-  Future<void> createOrg(String name, String type) async {
+  Future<void> createOrg({
+    required String name,
+    required String type,
+    required String adminName,
+    required String adminEmail,
+    required String adminPassword,
+  }) async {
     state = state.copyWith(isLoading: true, error: null, isSuccess: false);
 
     try {
@@ -97,23 +108,76 @@ class OrgNotifier extends Notifier<OrgState> {
         body: jsonEncode({
           'name': name,
           'type': type,
+          'admin_name': adminName,
+          'admin_email': adminEmail,
+          'admin_password': adminPassword,
         }),
       );
 
       if (response.statusCode == 201) {
         state = state.copyWith(isLoading: false, isSuccess: true);
         await fetchOrgs(); // Refresh list
+      } else if (response.statusCode >= 500) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Server error. Please try again later.',
+        );
       } else {
         final data = jsonDecode(response.body);
         state = state.copyWith(
           isLoading: false,
-          error: data['detail'] ?? 'Failed to create organization',
+          error: data['detail'] ?? data['msg'] ?? 'Failed to create organization',
         );
       }
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: 'An unexpected error occurred',
+        error: 'Network error. Please check your connection.',
+      );
+    }
+  }
+
+  Future<void> updateOrg(String id, {
+    String? name,
+    String? type,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null, isSuccess: false);
+
+    try {
+      final client = ref.read(httpClientProvider);
+      final authState = ref.read(authProvider);
+      
+      final response = await client.patch(
+        Uri.parse('$_baseUrl/orgs/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${authState.token}',
+        },
+        body: jsonEncode({
+          if (name != null) 'name': name,
+          if (type != null) 'type': type,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        state = state.copyWith(isLoading: false, isSuccess: true);
+        await fetchOrgs(); // Refresh list
+      } else if (response.statusCode >= 500) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Server error. Please try again later.',
+        );
+      } else {
+        final data = jsonDecode(response.body);
+        state = state.copyWith(
+          isLoading: false,
+          error: data['detail'] ?? 'Failed to update organization',
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Network error. Please check your connection.',
       );
     }
   }
@@ -135,6 +199,11 @@ class OrgNotifier extends Notifier<OrgState> {
       if (response.statusCode == 204) {
         state = state.copyWith(isLoading: false, isDeleteSuccess: true);
         await fetchOrgs(); // Refresh list
+      } else if (response.statusCode >= 500) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Server error. Please try again later.',
+        );
       } else {
         final data = jsonDecode(response.body);
         state = state.copyWith(
@@ -145,7 +214,7 @@ class OrgNotifier extends Notifier<OrgState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: 'An unexpected error occurred',
+        error: 'Network error. Please check your connection.',
       );
     }
   }

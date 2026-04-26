@@ -12,35 +12,29 @@ class AttendanceService:
     async def process_attendance(self, org_id: str, img_bytes: bytes, user_id: str = None) -> dict:
         """
         Processes an attendance attempt:
-        1. Verify liveness.
-        2. If live, extract embedding and match face.
-        3. Log the result.
+        1. Perform end-to-end recognition (liveness + matching).
+        2. Log the result.
         """
-        # 1. Verify liveness
-        liveness_result = await self.recognition_service.verify_liveness(img_bytes)
+        # 1. Unified recognition (Liveness + Face Detection + Embedding + Match)
+        rec_result = await self.recognition_service.process_recognition(org_id, img_bytes)
         
-        if not liveness_result["is_live"]:
+        if not rec_result["is_live"]:
             log = AttendanceLog(
                 org_id=org_id,
                 user_id=user_id,
                 status=AttendanceStatus.failed,
                 reason=AttendanceReason.spoof_detected,
-                confidence_score=liveness_result["score"]
+                confidence_score=rec_result["score"]
             )
             await self.attendance_repo.create_log(log)
             return {
                 "status": "failed",
                 "reason": "spoof_detected",
-                "score": liveness_result["score"]
+                "score": rec_result["score"]
             }
 
-        # 2. Extract embedding and match face
-        img = self.recognition_service.decode_image_from_bytes(img_bytes)
-        embedding = self.recognition_service.extract_embedding(img)
-        match_result = await self.recognition_service.match_face(org_id, embedding)
-
-        if match_result["match"]:
-            employee_id = match_result["employee_id"]
+        if rec_result["match"]:
+            employee_id = rec_result["employee_id"]
             
             # Check for open session
             open_log = await self.attendance_repo.find_open_log(org_id, employee_id)
@@ -56,7 +50,7 @@ class AttendanceService:
                     "status": "success",
                     "type": "exit",
                     "employee_id": employee_id,
-                    "score": match_result["score"]
+                    "score": rec_result["score"]
                 }
             else:
                 # Open new session (Entry)
@@ -65,7 +59,7 @@ class AttendanceService:
                     employee_id=employee_id,
                     user_id=user_id,
                     status=AttendanceStatus.success,
-                    confidence_score=match_result["score"],
+                    confidence_score=rec_result["score"],
                     check_in=datetime.now(timezone.utc)
                 )
                 await self.attendance_repo.create_log(log)
@@ -73,7 +67,7 @@ class AttendanceService:
                     "status": "success",
                     "type": "entry",
                     "employee_id": employee_id,
-                    "score": match_result["score"]
+                    "score": rec_result["score"]
                 }
         else:
             log = AttendanceLog(
@@ -81,11 +75,11 @@ class AttendanceService:
                 user_id=user_id,
                 status=AttendanceStatus.failed,
                 reason=AttendanceReason.no_match,
-                confidence_score=match_result["score"]
+                confidence_score=rec_result["score"]
             )
             await self.attendance_repo.create_log(log)
             return {
                 "status": "failed",
                 "reason": "no_match",
-                "score": match_result["score"]
+                "score": rec_result["score"]
             }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../auth/auth_provider.dart';
 import 'reports_provider.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
@@ -19,6 +20,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(reportsProvider);
+    final authState = ref.watch(authProvider);
+    final isAdmin = authState.role == 'admin';
 
     // Listen for errors and show snackbar
     ref.listen(reportsProvider.select((s) => s.error), (previous, next) {
@@ -31,7 +34,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reports'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Reports'),
+            Text(
+              isAdmin ? 'Organization-wide' : 'My Recordings Only',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+            ),
+          ],
+        ),
         actions: [
           if (state.isExporting)
             const Padding(
@@ -48,12 +60,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               tooltip: 'Export CSV',
               onPressed: () => ref.read(reportsProvider.notifier).exportLogs(),
             ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {
-              // TODO: Implement filtering
-            },
-          ),
+          if (isAdmin)
+            IconButton(
+              icon: const Icon(Icons.filter_list),
+              onPressed: () {
+                // TODO: Implement filtering for admin (Date, Dept, User)
+              },
+            ),
         ],
       ),
       body: RefreshIndicator(

@@ -9,7 +9,7 @@ from app.api.deps import get_current_user
 client = TestClient(app)
 
 def get_orgadmin_token(org_id="org_a"):
-    return create_access_token({"sub": "orgadmin@example.com", "role": "org_admin", "org_id": org_id})
+    return create_access_token({"sub": "orgadmin@example.com", "role": "admin", "org_id": org_id})
 
 @pytest.fixture
 def mock_db():
@@ -27,14 +27,14 @@ def mock_db():
     app.dependency_overrides.pop(get_database, None)
 
 @pytest.fixture
-def mock_org_admin_user():
-    user = {"email": "orgadmin@example.com", "role": "org_admin", "org_id": "org_a"}
+def mock_admin_user():
+    user = {"email": "orgadmin@example.com", "role": "admin", "org_id": "org_a"}
     app.dependency_overrides[get_current_user] = lambda: user
     yield user
     app.dependency_overrides.pop(get_current_user, None)
 
 @pytest.mark.asyncio
-async def test_create_employee_success(mock_db, mock_org_admin_user):
+async def test_create_employee_success(mock_db, mock_admin_user):
     token = get_orgadmin_token()
     
     # Mock department exists and belongs to org_a
@@ -55,7 +55,7 @@ async def test_create_employee_success(mock_db, mock_org_admin_user):
     assert data["is_active"] is True
 
 @pytest.mark.asyncio
-async def test_create_employee_invalid_dept(mock_db, mock_org_admin_user):
+async def test_create_employee_invalid_dept(mock_db, mock_admin_user):
     token = get_orgadmin_token()
     
     # Mock department not found (either doesn't exist or belongs to different org)
@@ -76,7 +76,7 @@ async def test_create_employee_invalid_dept(mock_db, mock_org_admin_user):
     })
 
 @pytest.mark.asyncio
-async def test_list_employees_with_filter(mock_db, mock_org_admin_user):
+async def test_list_employees_with_filter(mock_db, mock_admin_user):
     token = get_orgadmin_token()
     mock_employees = [
         {"_id": "emp1", "name": "John Doe", "dept_id": "dept_x", "org_id": "org_a", "is_active": True},
@@ -99,7 +99,7 @@ async def test_list_employees_with_filter(mock_db, mock_org_admin_user):
     mock_db["employees"].find.assert_called_with({"org_id": "org_a", "dept_id": "dept_x"})
 
 @pytest.mark.asyncio
-async def test_list_employees_no_filter(mock_db, mock_org_admin_user):
+async def test_list_employees_no_filter(mock_db, mock_admin_user):
     token = get_orgadmin_token()
     mock_employees = [
         {"_id": "emp1", "name": "John Doe", "dept_id": "dept_x", "org_id": "org_a", "is_active": True},

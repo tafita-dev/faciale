@@ -17,6 +17,52 @@ class _OrgListScreenState extends ConsumerState<OrgListScreen> {
     Future.microtask(() => ref.read(orgProvider.notifier).fetchOrgs());
   }
 
+  void _showEditDialog(String id, String currentName, String currentType) {
+    final nameController = TextEditingController(text: currentName);
+    String selectedType = currentType;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Organization'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Name'),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: selectedType,
+              items: const [
+                DropdownMenuItem(value: 'school', child: Text('School')),
+                DropdownMenuItem(value: 'company', child: Text('Company')),
+              ],
+              onChanged: (val) {
+                if (val != null) selectedType = val;
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ref.read(orgProvider.notifier).updateOrg(id,
+                  name: nameController.text, type: selectedType);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showDeleteConfirmation(String id, String name) {
     showDialog(
       context: context,
@@ -97,10 +143,22 @@ class _OrgListScreenState extends ConsumerState<OrgListScreen> {
                           ),
                           title: Text(org.name),
                           subtitle: Text(org.type.toUpperCase()),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: AppColors.error),
-                            onPressed: () =>
-                                _showDeleteConfirmation(org.id, org.name),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit,
+                                    color: AppColors.primary),
+                                onPressed: () => _showEditDialog(
+                                    org.id, org.name, org.type),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete,
+                                    color: AppColors.error),
+                                onPressed: () =>
+                                    _showDeleteConfirmation(org.id, org.name),
+                              ),
+                            ],
                           ),
                         );
                       },

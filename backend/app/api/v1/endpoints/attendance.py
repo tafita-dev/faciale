@@ -13,7 +13,7 @@ router = APIRouter()
 async def check_in(
     *,
     file: UploadFile = File(...),
-    current_user: dict = Depends(deps.check_org_user),
+    current_user: dict = Depends(deps.check_only_user),
     attendance_service: AttendanceService = Depends(deps.get_attendance_service),
     employee_repo: EmployeeRepository = Depends(deps.get_employee_repository),
     attendance_repo: AttendanceRepository = Depends(deps.get_attendance_repository)

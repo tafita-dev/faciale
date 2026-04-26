@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 router = APIRouter()
 
-@router.post("/", response_model=User, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=User, status_code=status.HTTP_201_CREATED, response_model_by_alias=True)
 async def create_user(
     *,
     db: Any = Depends(get_database),
@@ -39,7 +39,7 @@ async def create_user(
     await db["users"].insert_one(user_obj)
     return user_obj
 
-@router.get("/", response_model=List[User])
+@router.get("/", response_model=List[User], response_model_by_alias=True)
 async def list_users(
     *,
     db: Any = Depends(get_database),
