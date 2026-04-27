@@ -57,11 +57,13 @@ class DepartmentNotifier extends Notifier<DeptState> {
   }
 
   Future<void> fetchDepartments() async {
+    print('DEBUG: fetchDepartments called');
     state = state.copyWith(isLoading: true, error: null);
 
     try {
       final client = ref.read(httpClientProvider);
       final authState = ref.read(authProvider);
+      print('DEBUG: fetchDepartments fetching from ${_baseUrl}/departments/');
       
       final response = await client.get(
         Uri.parse('$_baseUrl/departments/'),
@@ -70,6 +72,7 @@ class DepartmentNotifier extends Notifier<DeptState> {
         },
       );
 
+      print('DEBUG: fetchDepartments response status: ${response.statusCode}');
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         final depts = data.map((item) => Department.fromJson(item)).toList();
@@ -81,11 +84,122 @@ class DepartmentNotifier extends Notifier<DeptState> {
           error: data['detail'] ?? 'Failed to fetch departments',
         );
       }
+    } catch (e, stack) {
+      print('DEBUG: department_provider error: $e');
+      print('DEBUG: department_provider stack: $stack');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'An unexpected error occurred',
+      );
+    }
+  }
+
+  Future<bool> createDepartment(String name) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final client = ref.read(httpClientProvider);
+      final authState = ref.read(authProvider);
+
+      final response = await client.post(
+        Uri.parse('$_baseUrl/departments/'),
+        headers: {
+          'Authorization': 'Bearer ${authState.token}',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'name': name}),
+      );
+
+      if (response.statusCode == 201) {
+        state = state.copyWith(isLoading: false);
+        await fetchDepartments();
+        return true;
+      } else {
+        final data = jsonDecode(response.body);
+        state = state.copyWith(
+          isLoading: false,
+          error: data['detail'] ?? 'Failed to create department',
+        );
+        return false;
+      }
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: 'An unexpected error occurred',
       );
+      return false;
+    }
+  }
+
+  Future<bool> updateDepartment(String id, String name) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final client = ref.read(httpClientProvider);
+      final authState = ref.read(authProvider);
+
+      final response = await client.put(
+        Uri.parse('$_baseUrl/departments/$id'),
+        headers: {
+          'Authorization': 'Bearer ${authState.token}',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'name': name}),
+      );
+
+      if (response.statusCode == 200) {
+        state = state.copyWith(isLoading: false);
+        await fetchDepartments();
+        return true;
+      } else {
+        final data = jsonDecode(response.body);
+        state = state.copyWith(
+          isLoading: false,
+          error: data['detail'] ?? 'Failed to update department',
+        );
+        return false;
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'An unexpected error occurred',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> deleteDepartment(String id) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final client = ref.read(httpClientProvider);
+      final authState = ref.read(authProvider);
+
+      final response = await client.delete(
+        Uri.parse('$_baseUrl/departments/$id'),
+        headers: {
+          'Authorization': 'Bearer ${authState.token}',
+        },
+      );
+
+      if (response.statusCode == 204) {
+        state = state.copyWith(isLoading: false);
+        await fetchDepartments();
+        return true;
+      } else {
+        final data = jsonDecode(response.body);
+        state = state.copyWith(
+          isLoading: false,
+          error: data['detail'] ?? 'Failed to delete department',
+        );
+        return false;
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'An unexpected error occurred',
+      );
+      return false;
     }
   }
 }

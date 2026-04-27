@@ -23,6 +23,15 @@ class MockAuthNotifier extends Notifier<AuthState> implements AuthNotifier {
   
   @override
   Future<void> logout() async {}
+
+  @override
+  Future<void> confirmPasswordReset(String token, String newPassword) async {}
+
+  @override
+  Future<void> requestPasswordReset(String email) async {}
+
+  @override
+  void resetStatus() {}
 }
 
 void main() {
@@ -102,5 +111,53 @@ void main() {
 
     expect(find.text('Organization deleted successfully'), findsOneWidget);
     expect(find.text('No organizations found'), findsOneWidget);
+  });
+
+  testWidgets('shows edit dialog and updates on save', (WidgetTester tester) async {
+    final orgsJson = [
+      {'_id': '1', 'name': 'Org 1', 'type': 'school', 'created_at': DateTime.now().toIso8601String()},
+    ];
+
+    when(mockClient.get(any, headers: anyNamed('headers')))
+        .thenAnswer((_) async => http.Response(jsonEncode(orgsJson), 200));
+
+    await tester.pumpWidget(createWidgetUnderTest());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.edit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit Organization'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Name'), findsOneWidget);
+
+    // Enter new name
+    await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Org 1 Updated');
+    
+    // Select Company type
+    await tester.tap(find.text('School'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Company').last);
+    await tester.pumpAndSettle();
+
+    when(mockClient.patch(any, headers: anyNamed('headers'), body: anyNamed('body')))
+        .thenAnswer((_) async => http.Response(jsonEncode({
+          '_id': '1',
+          'name': 'Org 1 Updated',
+          'type': 'company',
+          'created_at': DateTime.now().toIso8601String(),
+        }), 200));
+
+    // Refresh mock after update
+    when(mockClient.get(any, headers: anyNamed('headers')))
+        .thenAnswer((_) async => http.Response(jsonEncode([
+          {'_id': '1', 'name': 'Org 1 Updated', 'type': 'company', 'created_at': DateTime.now().toIso8601String()},
+        ]), 200));
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Organization updated successfully'), findsOneWidget);
+    expect(find.text('Org 1 Updated'), findsOneWidget);
+    expect(find.text('COMPANY'), findsOneWidget);
   });
 }

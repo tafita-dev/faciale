@@ -53,5 +53,11 @@
 ## [Epic 9] Performance & Production Readiness
 
 - **Goal:** Verify non-functional requirements and implement maintenance features.
-- **Status:** BACKLOG
+- **Status:** DONE
 - **Ref:** @specs/01-PRD.md#non-functional-requirements
+
+## [Epic 10] UX Refinement & Extended Management
+
+- **Goal:** Enhance administrative CRUDs, implement multi-language support, and apply Neumorphism design.
+- **Status:** IN_PROGRESS
+- **Ref:** User Request (April 2026)

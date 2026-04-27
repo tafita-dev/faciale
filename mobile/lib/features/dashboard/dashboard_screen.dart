@@ -82,10 +82,10 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(width: 12),
                   _SummaryCard(
-                    title: isUser ? 'My Employees' : 'Total Employees',
+                    title: isUser ? 'My Colleagues' : 'Total Employees',
                     value: state.totalEmployees.toString(),
                     color: AppColors.primary,
-                    onTap: () => context.go('/employees'),
+                    onTap: () => context.go(isUser ? '/directory' : '/employees'),
                   ),
                 ],
               ),
@@ -189,7 +189,7 @@ class DashboardScreen extends ConsumerWidget {
                     },
                   ),
                 ],
-                if (isAdmin)
+                if (isAdmin) ...[
                   ListTile(
                     leading:
                         const Icon(Icons.person_add, color: AppColors.primary),
@@ -199,6 +199,16 @@ class DashboardScreen extends ConsumerWidget {
                       context.push('/admin/user/create');
                     },
                   ),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.category, color: AppColors.primary),
+                    title: const Text('Manage Departments'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/admin/departments');
+                    },
+                  ),
+                ],
               ],
             ],
           ),

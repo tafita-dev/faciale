@@ -14,13 +14,20 @@ def get_orgadmin_token(org_id="org_a"):
 @pytest.fixture
 def mock_db():
     mock_db_instance = MagicMock()
-    mock_coll = MagicMock()
-    mock_db_instance.__getitem__.return_value = mock_coll
-    
-    # Setup async methods on collection
-    mock_coll.find_one = AsyncMock()
-    mock_coll.insert_one = AsyncMock()
-    mock_coll.find = MagicMock()
+    collections = {}
+
+    def get_collection(name):
+        if name not in collections:
+            mock_coll = MagicMock()
+            mock_coll.find_one = AsyncMock()
+            mock_coll.insert_one = AsyncMock()
+            mock_coll.update_one = AsyncMock()
+            mock_coll.delete_one = AsyncMock()
+            mock_coll.find = MagicMock()
+            collections[name] = mock_coll
+        return collections[name]
+
+    mock_db_instance.__getitem__.side_effect = get_collection
     
     app.dependency_overrides[get_database] = lambda: mock_db_instance
     yield mock_db_instance
@@ -149,3 +156,58 @@ async def test_create_department_no_org_id(mock_db):
     
     assert response.status_code == 403
     app.dependency_overrides.pop(get_current_user, None)
+
+@pytest.mark.asyncio
+async def test_update_department_success(mock_db, mock_admin_user):
+    token = get_orgadmin_token()
+    dept_id = "dept123"
+    
+    # First call find_one for exists, second call for duplicate check
+    mock_db["departments"].find_one.side_effect = [
+        {"_id": dept_id, "name": "Old Name", "org_id": "org_a"}, # check existence
+        None # check duplicate
+    ]
+    mock_db["departments"].update_one = AsyncMock()
+    
+    response = client.put(
+        f"/api/v1/departments/{dept_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"name": "New Name"}
+    )
+    
+    assert response.status_code == 200
+    assert response.json()["name"] == "New Name"
+    assert mock_db["departments"].update_one.called
+
+@pytest.mark.asyncio
+async def test_delete_department_success(mock_db, mock_admin_user):
+    token = get_orgadmin_token()
+    dept_id = "dept123"
+    
+    mock_db["departments"].find_one.return_value = {"_id": dept_id, "org_id": "org_a"}
+    mock_db["employees"].find_one = AsyncMock(return_value=None)
+    mock_db["departments"].delete_one = AsyncMock()
+    
+    response = client.delete(
+        f"/api/v1/departments/{dept_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    
+    assert response.status_code == 204
+    mock_db["departments"].delete_one.assert_called_once_with({"_id": dept_id, "org_id": "org_a"})
+
+@pytest.mark.asyncio
+async def test_delete_department_with_employees(mock_db, mock_admin_user):
+    token = get_orgadmin_token()
+    dept_id = "dept123"
+    
+    mock_db["departments"].find_one.return_value = {"_id": dept_id, "org_id": "org_a"}
+    mock_db["employees"].find_one = AsyncMock(return_value={"_id": "emp1"})
+    
+    response = client.delete(
+        f"/api/v1/departments/{dept_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    
+    assert response.status_code == 400
+    assert "still has employees" in response.json()["detail"]

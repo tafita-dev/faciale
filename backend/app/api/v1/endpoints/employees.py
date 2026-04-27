@@ -2,7 +2,7 @@ from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile
 from app.api import deps
 from app.db.mongodb import get_database
-from app.models.employee import Employee, EmployeeCreate
+from app.models.employee import Employee, EmployeeCreate, EmployeePublic
 from app.services import enrollment
 from app.core.config import settings
 import uuid
@@ -72,6 +72,30 @@ async def list_employees(
         
     cursor = db["employees"].find(query)
     employees = await cursor.to_list(length=100)
+    return employees
+
+@router.get("/directory", response_model=List[EmployeePublic], response_model_by_alias=True)
+async def list_employee_directory(
+    *,
+    db: Any = Depends(get_database),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    current_user: dict = Depends(deps.check_org_user)
+) -> Any:
+    """
+    Public directory of employees for the current organization.
+    Accessible by all organization users.
+    Filters out sensitive data.
+    """
+    org_id = current_user.get("org_id")
+    
+    query = {
+        "org_id": org_id,
+        "is_active": True
+    }
+    
+    cursor = db["employees"].find(query).skip(skip).limit(limit)
+    employees = await cursor.to_list(length=limit)
     return employees
 
 @router.post("/{employee_id}/enroll", status_code=status.HTTP_202_ACCEPTED)

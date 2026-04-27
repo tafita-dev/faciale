@@ -100,6 +100,14 @@ class _OrgListScreenState extends ConsumerState<OrgListScreen> {
           ),
         );
         ref.read(orgProvider.notifier).reset();
+      } else if (next.isSuccess) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Organization updated successfully'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        ref.read(orgProvider.notifier).reset();
       } else if (next.error != null && next.error != previous?.error) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

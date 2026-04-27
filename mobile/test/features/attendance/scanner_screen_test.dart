@@ -91,8 +91,8 @@ void main() {
     await tester.pump();
     expect(find.text('Success!'), findsOneWidget);
 
-    // Wait for 2 seconds
-    await tester.pump(const Duration(seconds: 2));
+    // Wait for 3 seconds
+    await tester.pump(const Duration(seconds: 3));
     await tester.pump(); // trigger rebuild after timer
 
     expect(find.text('Align your face'), findsOneWidget);

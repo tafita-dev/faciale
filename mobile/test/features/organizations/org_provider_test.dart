@@ -220,4 +220,41 @@ void main() {
     expect(state.isSuccess, false);
     expect(state.error, 'Creation Error');
   });
+
+  test('updateOrg success updates state and refreshes list', () async {
+    final updatedOrg = {
+      '_id': '1',
+      'name': 'Updated Org',
+      'type': 'company',
+      'created_at': DateTime.now().toIso8601String(),
+    };
+
+    when(mockClient.patch(
+      any,
+      headers: anyNamed('headers'),
+      body: anyNamed('body'),
+    )).thenAnswer((_) async => http.Response(jsonEncode(updatedOrg), 200));
+
+    // fetchOrgs mock for refresh
+    when(mockClient.get(
+      any,
+      headers: anyNamed('headers'),
+    )).thenAnswer((_) async => http.Response('[]', 200));
+
+    await container.read(orgProvider.notifier).updateOrg('1', name: 'Updated Org', type: 'company');
+
+    final state = container.read(orgProvider);
+    expect(state.isLoading, false);
+    expect(state.isSuccess, true);
+    expect(state.error, null);
+
+    verify(mockClient.patch(
+      Uri.parse('http://localhost:8000/api/v1/orgs/1'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer test_token',
+      },
+      body: jsonEncode({'name': 'Updated Org', 'type': 'company'}),
+    )).called(1);
+  });
 }

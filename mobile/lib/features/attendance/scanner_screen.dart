@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,7 @@ class ScannerScreen extends ConsumerStatefulWidget {
 class _ScannerScreenState extends ConsumerState<ScannerScreen> {
   CameraController? _controller;
   bool _isInitialized = false;
+  Timer? _scanTimer;
 
   @override
   void initState() {
@@ -27,6 +29,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
 
   @override
   void dispose() {
+    _scanTimer?.cancel();
     _controller?.dispose();
     // Restore system UI
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -55,32 +58,33 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
         setState(() {
           _isInitialized = true;
         });
-        _startImageStream();
+        _startScanning();
       }
     } catch (e) {
       debugPrint('Camera initialization error: $e');
     }
   }
 
-  void _startImageStream() {
-    if (_controller == null || !_controller!.value.isInitialized) return;
-
-    // Throttle frame processing to balance battery/performance
-    int frameCount = 0;
-    _controller!.startImageStream((CameraImage image) {
-      frameCount++;
-      if (frameCount % 10 == 0) { // Process every 10th frame
-        _processFrame(image);
-      }
+  void _startScanning() {
+    _scanTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      _attemptCapture();
     });
   }
 
-  void _processFrame(CameraImage image) {
+  Future<void> _attemptCapture() async {
     final status = ref.read(scannerProvider).status;
     if (status != ScannerStatus.scanning) return;
+    if (_controller == null || !_controller!.value.isInitialized) return;
+    if (_controller!.value.isTakingPicture) return;
 
-    // TODO: Implement face detection and backend recognition call
-    // For now, this is just a placeholder for the image_stream integration
+    try {
+      final image = await _controller!.takePicture();
+      if (mounted) {
+        await ref.read(scannerProvider.notifier).processImage(image.path);
+      }
+    } catch (e) {
+      debugPrint('Capture error: $e');
+    }
   }
 
   @override
@@ -135,6 +139,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                     ),
                     child: Text(
                       scannerState.message!,
+                      textAlign: TextAlign.center,
                       style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -191,6 +196,9 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
     }
     if (error.contains('Multiple')) {
       return 'Multiple faces detected. Please scan one person at a time.';
+    }
+    if (error.contains('not found')) {
+      return 'Face not recognized. Please ensure you are enrolled.';
     }
     return error;
   }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'attendance_repository.dart';
 
 enum ScannerStatus {
   idle,
@@ -52,9 +53,41 @@ class ScannerNotifier extends Notifier<ScannerState> {
 
     // Auto reset after 2 seconds for success/failure
     if (status == ScannerStatus.success || status == ScannerStatus.failure) {
-      _resetTimer = Timer(const Duration(seconds: 2), () {
+      _resetTimer = Timer(const Duration(seconds: 3), () {
         reset();
       });
+    }
+  }
+
+  Future<void> processImage(String imagePath) async {
+    if (state.status == ScannerStatus.processing) return;
+
+    setStatus(ScannerStatus.processing, message: 'Analyzing...');
+
+    try {
+      final repository = ref.read(attendanceRepositoryProvider);
+      final result = await repository.checkIn(imagePath);
+
+      if (result['success'] == true) {
+        final data = result['data'];
+        setStatus(
+          ScannerStatus.success, 
+          message: result['message'],
+          name: data['employee_name']
+        );
+      } else {
+        setStatus(
+          ScannerStatus.failure,
+          message: 'Failed',
+          error: result['message']
+        );
+      }
+    } catch (e) {
+      setStatus(
+        ScannerStatus.failure,
+        message: 'Error',
+        error: e.toString()
+      );
     }
   }
 

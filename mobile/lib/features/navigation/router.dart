@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../employees/employees_screen.dart';
+import '../employees/directory_screen.dart';
 import '../reports/reports_screen.dart';
 import '../profile/profile_screen.dart';
 import '../attendance/scanner_screen.dart';
@@ -12,6 +13,7 @@ import '../auth/create_user_screen.dart';
 import '../employees/enroll_screen.dart';
 import '../organizations/create_org_screen.dart';
 import '../organizations/org_list_screen.dart';
+import '../organizations/department_management_screen.dart';
 import 'navigation_shell.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -45,6 +47,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const OrgListScreen(),
       ),
       GoRoute(
+        path: '/admin/departments',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const DepartmentManagementScreen(),
+      ),
+      GoRoute(
         path: '/admin/user/create',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const CreateUserScreen(),
@@ -67,6 +74,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/employees',
                 builder: (context, state) => const EmployeesScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/directory',
+                builder: (context, state) => const DirectoryScreen(),
               ),
             ],
           ),

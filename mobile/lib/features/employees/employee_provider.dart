@@ -60,6 +60,55 @@ final employeeProvider = NotifierProvider<EmployeeNotifier, EmployeeState>(() {
   return EmployeeNotifier();
 });
 
+final directoryProvider = NotifierProvider<DirectoryNotifier, EmployeeState>(() {
+  return DirectoryNotifier();
+});
+
+class DirectoryNotifier extends Notifier<EmployeeState> {
+  String get _baseUrl => dotenv.env['API_URL'] ?? 'http://localhost:8000/api/v1';
+
+  @override
+  EmployeeState build() {
+    return EmployeeState();
+  }
+
+  Future<void> fetchDirectory({int skip = 0, int limit = 50}) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final client = ref.read(httpClientProvider);
+      final authState = ref.read(authProvider);
+
+      final response = await client.get(
+        Uri.parse('$_baseUrl/employees/directory?skip=$skip&limit=$limit'),
+        headers: {
+          'Authorization': 'Bearer ${authState.token}',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final employees = data.map((item) => Employee.fromJson(item)).toList();
+        state = state.copyWith(
+          isLoading: false,
+          employees: skip == 0 ? employees : [...state.employees, ...employees],
+        );
+      } else {
+        final data = jsonDecode(response.body);
+        state = state.copyWith(
+          isLoading: false,
+          error: data['detail'] ?? 'Failed to fetch directory',
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'An unexpected error occurred',
+      );
+    }
+  }
+}
+
 class EmployeeNotifier extends Notifier<EmployeeState> {
   String get _baseUrl => dotenv.env['API_URL'] ?? 'http://localhost:8000/api/v1';
 

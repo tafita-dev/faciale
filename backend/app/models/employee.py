@@ -30,3 +30,10 @@ class EmployeeInDB(EmployeeBase):
 
 class Employee(EmployeeInDB):
     pass
+
+class EmployeePublic(EmployeeBase):
+    id: str = Field(alias="_id")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
