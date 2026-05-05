@@ -20,6 +20,7 @@ class EnrollScreen extends ConsumerStatefulWidget {
 class _EnrollScreenState extends ConsumerState<EnrollScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
   String? _selectedDeptId;
   String? _imagePath;
 
@@ -46,6 +47,7 @@ class _EnrollScreenState extends ConsumerState<EnrollScreen> {
       await ref.read(employeeProvider.notifier).createAndEnrollEmployee(
         name: _nameController.text,
         deptId: _selectedDeptId!,
+        email: _emailController.text,
         imagePath: _imagePath!,
       );
     }
@@ -91,114 +93,140 @@ class _EnrollScreenState extends ConsumerState<EnrollScreen> {
       appBar: AppBar(title: Text('employee_enrollment'.tr())),
       body: Stack(
         children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  NeumorphicCard(
-                    isInset: true,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    child: TextFormField(
-                      controller: _nameController,
-                      decoration: InputDecoration(
-                        labelText: 'full_name'.tr(),
-                        border: InputBorder.none,
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'please_enter_name'.tr();
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  if (deptState.isLoading)
-                    const Center(child: CircularProgressIndicator())
-                  else
-                    NeumorphicCard(
-                      isInset: true,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      child: DropdownButtonFormField<String>(
-                        value: _selectedDeptId,
-                        decoration: InputDecoration(
-                          labelText: 'department_name'.tr(),
-                          border: InputBorder.none,
-                        ),
-                        items: deptState.departments.map((dept) {
-                          return DropdownMenuItem(
-                            value: dept.id,
-                            child: Text(dept.name),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedDeptId = value;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'please_select_department'.tr();
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                  const SizedBox(height: 32),
-                  Text(
-                    'reference_photo'.tr(), 
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.text)
-                  ),
-                  const SizedBox(height: 16),
-                  GestureDetector(
-                    onTap: _handleCapture,
-                    child: NeumorphicCard(
-                      padding: EdgeInsets.zero,
-                      child: Container(
-                        height: 200,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          image: _imagePath != null && _imagePath != 'fake_path.jpg'
-                              ? DecorationImage(
-                                  image: FileImage(File(_imagePath!)),
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
-                        ),
-                        child: _imagePath == null
-                            ? Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.camera_alt, size: 48, color: AppColors.primary),
-                                  const SizedBox(height: 8),
-                                  Text('capture_reference_photo'.tr(), style: const TextStyle(color: Colors.grey)),
-                                ],
-                              )
-                            : _imagePath == 'fake_path.jpg'
-                                ? Center(child: Text('photo_captured'.tr()))
-                                : null,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 48),
-                  NeumorphicButton(
-                    onPressed: empState.isLoading ? () {} : _submit,
-                    child: Center(
-                      child: Text(
-                        'save'.tr().toUpperCase(),
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
+          Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      NeumorphicCard(
+                        isInset: true,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        child: TextFormField(
+                          controller: _nameController,
+                          decoration: InputDecoration(
+                            labelText: 'full_name'.tr(),
+                            border: InputBorder.none,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'please_enter_name'.tr();
+                            }
+                            return null;
+                          },
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                      NeumorphicCard(
+                        isInset: true,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        child: TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            labelText: 'email'.tr(),
+                            border: InputBorder.none,
+                          ),
+                          validator: (value) {
+                            if (value != null && value.isNotEmpty) {
+                              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                                return 'please_enter_valid_email'.tr();
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      if (deptState.isLoading)
+                        const Center(child: CircularProgressIndicator())
+                      else
+                        NeumorphicCard(
+                          isInset: true,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedDeptId,
+                            decoration: InputDecoration(
+                              labelText: 'department_name'.tr(),
+                              border: InputBorder.none,
+                            ),
+                            items: deptState.departments.map((dept) {
+                              return DropdownMenuItem(
+                                value: dept.id,
+                                child: Text(dept.name),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedDeptId = value;
+                              });
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'please_select_department'.tr();
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      const SizedBox(height: 32),
+                      Text(
+                        'reference_photo'.tr(), 
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.text)
+                      ),
+                      const SizedBox(height: 16),
+                      GestureDetector(
+                        onTap: _handleCapture,
+                        child: NeumorphicCard(
+                          padding: EdgeInsets.zero,
+                          child: Container(
+                            height: 200,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              image: _imagePath != null && _imagePath != 'fake_path.jpg'
+                                  ? DecorationImage(
+                                      image: FileImage(File(_imagePath!)),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
+                            child: _imagePath == null
+                                ? Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.camera_alt, size: 48, color: AppColors.primary),
+                                      const SizedBox(height: 8),
+                                      Text('capture_reference_photo'.tr(), style: const TextStyle(color: Colors.grey)),
+                                    ],
+                                  )
+                                : _imagePath == 'fake_path.jpg'
+                                    ? Center(child: Text('photo_captured'.tr()))
+                                    : null,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 48),
+                      NeumorphicButton(
+                        onPressed: empState.isLoading ? () {} : _submit,
+                        child: Center(
+                          child: Text(
+                            'save'.tr().toUpperCase(),
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),

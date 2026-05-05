@@ -60,99 +60,104 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: Text('profile'.tr())),
-      body: ListView(
-        padding: const EdgeInsets.all(24.0),
-        children: [
-          Center(
-            child: NeumorphicCard(
-              borderRadius: 80,
-              padding: const EdgeInsets.all(8),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(72),
-                child: authState.photoUrl != null && authState.photoUrl!.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: authState.photoUrl!,
-                        width: 144,
-                        height: 144,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          width: 144,
-                          height: 144,
-                          color: AppColors.accent,
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => _buildPlaceholderAvatar(),
-                      )
-                    : _buildPlaceholderAvatar(),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Center(
-            child: Column(
-              children: [
-                Text(
-                  authState.name ?? 'user'.tr(),
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: ListView(
+            padding: const EdgeInsets.all(24.0),
+            children: [
+              Center(
+                child: NeumorphicCard(
+                  borderRadius: 80,
+                  padding: const EdgeInsets.all(8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(72),
+                    child: authState.photoUrl != null && authState.photoUrl!.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: authState.photoUrl!,
+                            width: 144,
+                            height: 144,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              width: 144,
+                              height: 144,
+                              color: AppColors.accent,
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => _buildPlaceholderAvatar(),
+                          )
+                        : _buildPlaceholderAvatar(),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  authState.email ?? '',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
+              ),
+              const SizedBox(height: 24),
+              Center(
+                child: Column(
+                  children: [
+                    Text(
+                      authState.name ?? 'user'.tr(),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      authState.email ?? '',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Center(
+                child: NeumorphicCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  borderRadius: 20,
+                  child: Text(
+                    authState.role?.toUpperCase() ?? 'USER',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                      letterSpacing: 1.2,
+                    ),
                   ),
+                ),
+              ),
+              const SizedBox(height: 48),
+              _buildActionItem(
+                icon: Icons.settings,
+                title: 'settings'.tr(),
+                onTap: () => context.push('/settings'),
+              ),
+              if (authState.role == 'admin') ...[
+                const SizedBox(height: 16),
+                _buildActionItem(
+                  icon: Icons.business,
+                  title: 'organization_settings'.tr(),
+                  onTap: () => context.push('/admin/org/settings'),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Center(
-            child: NeumorphicCard(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              borderRadius: 20,
-              child: Text(
-                authState.role?.toUpperCase() ?? 'USER',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                  letterSpacing: 1.2,
-                ),
+              const SizedBox(height: 16),
+              _buildActionItem(
+                icon: Icons.logout,
+                title: 'logout'.tr(),
+                color: AppColors.error,
+                onTap: _showLogoutConfirmation,
               ),
-            ),
+              const SizedBox(height: 48),
+              const Center(child: Logo(size: 20)),
+              const SizedBox(height: 24),
+            ],
           ),
-          const SizedBox(height: 48),
-          _buildActionItem(
-            icon: Icons.settings,
-            title: 'settings'.tr(),
-            onTap: () => context.push('/settings'),
-          ),
-          if (authState.role == 'admin') ...[
-            const SizedBox(height: 16),
-            _buildActionItem(
-              icon: Icons.business,
-              title: 'organization_settings'.tr(),
-              onTap: () => context.push('/admin/org/settings'),
-            ),
-          ],
-          const SizedBox(height: 16),
-          _buildActionItem(
-            icon: Icons.logout,
-            title: 'logout'.tr(),
-            color: AppColors.error,
-            onTap: _showLogoutConfirmation,
-          ),
-          const SizedBox(height: 48),
-          const Center(child: Logo(size: 20)),
-          const SizedBox(height: 24),
-        ],
+        ),
       ),
     );
   }

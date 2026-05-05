@@ -10,6 +10,10 @@ class AttendanceStatus(str, Enum):
     present = "present"
     late = "late"
 
+class AttendanceType(str, Enum):
+    entry = "entry"
+    exit = "exit"
+
 class AttendanceReason(str, Enum):
     no_match = "no_match"
     spoof_detected = "spoof_detected"
@@ -20,10 +24,11 @@ class AttendanceLog(BaseModel):
     employee_id: Optional[str] = None
     user_id: Optional[str] = None # The user who recorded the pointage
     status: AttendanceStatus
+    attendance_type: Optional[AttendanceType] = None # entry or exit
     reason: Optional[AttendanceReason] = None
     confidence_score: float = 0.0
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    # For paired entry/exit records as per new rules
+    # For paired entry/exit records (legacy support or internal grouping)
     check_in: Optional[datetime] = None
     check_out: Optional[datetime] = None
 

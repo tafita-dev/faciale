@@ -39,6 +39,7 @@ async def create_org(
         "_id": org_id,
         "name": org_in.name,
         "type": org_in.type,
+        "admin_email": org_in.admin_email,
         "logo_url": org_in.logo_url,
         "created_at": datetime.now(timezone.utc)
     }

@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -50,134 +51,136 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
-        child: ListView(
-          padding: const EdgeInsets.all(24.0),
-          children: [
-            if (isSuperAdmin) ...[
-              // Super Admin Summary Cards
-              Row(
-                children: [
-                  _SummaryCard(
-                    title: 'organizations'.tr(),
-                    value: state.totalOrganizations.toString(),
-                    color: AppColors.primary,
-                    onTap: () => context.push('/admin/orgs'),
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 1000),
+          child: RefreshIndicator(
+            onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
+            child: ListView(
+              padding: const EdgeInsets.all(24.0),
+              children: [
+                if (isSuperAdmin) ...[
+                  // Super Admin Summary Cards
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final columns = constraints.maxWidth > 600 ? 4 : 2;
+                      return _buildSummaryGrid(
+                        columns: columns,
+                        children: [
+                          _SummaryCard(
+                            title: 'organizations'.tr(),
+                            value: state.totalOrganizations.toString(),
+                            color: AppColors.primary,
+                            onTap: () => context.push('/admin/orgs'),
+                          ),
+                          _SummaryCard(
+                            title: 'total_admins'.tr(),
+                            value: state.totalAdmins.toString(),
+                            color: AppColors.success,
+                          ),
+                          _SummaryCard(
+                            title: 'total_users'.tr(),
+                            value: state.totalUsers.toString(),
+                            color: AppColors.text,
+                          ),
+                          _SummaryCard(
+                            title: 'total_employees'.tr(),
+                            value: state.totalEmployees.toString(),
+                            color: AppColors.primary,
+                          ),
+                        ],
+                      );
+                    },
                   ),
-                  const SizedBox(width: 16),
-                  _SummaryCard(
-                    title: 'total_admins'.tr(),
-                    value: state.totalAdmins.toString(),
-                    color: AppColors.success,
+                ] else ...[
+                  // Org Admin / User Summary Cards
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final columns = constraints.maxWidth > 600 ? (isAdmin ? 4 : 3) : 2;
+                      return _buildSummaryGrid(
+                        columns: columns,
+                        children: [
+                          _SummaryCard(
+                            title: 'present_today'.tr(),
+                            value: state.presentToday.toString(),
+                            color: AppColors.success,
+                          ),
+                          _SummaryCard(
+                            title: isUser ? 'my_colleagues'.tr() : 'total_employees'.tr(),
+                            value: state.totalEmployees.toString(),
+                            color: AppColors.primary,
+                            onTap: () => context.go(isUser ? '/directory' : '/employees'),
+                          ),
+                          _SummaryCard(
+                            title: 'late_absent'.tr(),
+                            value: state.lateAbsent.toString(),
+                            color: AppColors.error,
+                          ),
+                          if (isAdmin)
+                            _SummaryCard(
+                              title: 'total_users'.tr(),
+                              value: state.totalUsers.toString(),
+                              color: AppColors.primary,
+                            ),
+                        ],
+                      );
+                    },
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  _SummaryCard(
-                    title: 'total_users'.tr(),
-                    value: state.totalUsers.toString(),
-                    color: AppColors.text,
-                  ),
-                  const SizedBox(width: 16),
-                  _SummaryCard(
-                    title: 'total_employees'.tr(),
-                    value: state.totalEmployees.toString(),
-                    color: AppColors.primary,
-                  ),
-                ],
-              ),
-            ] else ...[
-              // Org Admin / User Summary Cards
-              Row(
-                children: [
-                  _SummaryCard(
-                    title: 'present_today'.tr(),
-                    value: state.presentToday.toString(),
-                    color: AppColors.success,
-                  ),
-                  const SizedBox(width: 16),
-                  _SummaryCard(
-                    title: isUser ? 'my_colleagues'.tr() : 'total_employees'.tr(),
-                    value: state.totalEmployees.toString(),
-                    color: AppColors.primary,
-                    onTap: () => context.go(isUser ? '/directory' : '/employees'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  _SummaryCard(
-                    title: 'late_absent'.tr(),
-                    value: state.lateAbsent.toString(),
-                    color: AppColors.error,
-                  ),
-                  if (isAdmin) ...[
-                    const SizedBox(width: 16),
-                    _SummaryCard(
-                      title: 'total_users'.tr(),
-                      value: state.totalUsers.toString(),
-                      color: AppColors.primary,
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 32),
-              Text(
-                'recent_activity'.tr(),
-                style: const TextStyle(
+                  const SizedBox(height: 32),
+                  Text(
+                    'recent_activity'.tr(),
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppColors.text,
                     ),
-              ),
-              const SizedBox(height: 16),
-              // Real-time Feed
-              if (state.recentCheckIns.isEmpty)
-                Center(child: Text('no_recent_activity'.tr()))
-              else
-                ...state.recentCheckIns.map((entry) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: NeumorphicCard(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          NeumorphicCard(
-                            padding: const EdgeInsets.all(8),
-                            borderRadius: 12,
-                            child: const Icon(Icons.person, color: AppColors.primary),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  entry.employeeName,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  // Real-time Feed
+                  if (state.recentCheckIns.isEmpty)
+                    Center(child: Text('no_recent_activity'.tr()))
+                  else
+                    ...state.recentCheckIns.map((entry) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: NeumorphicCard(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              NeumorphicCard(
+                                padding: const EdgeInsets.all(8),
+                                borderRadius: 12,
+                                child: const Icon(Icons.person, color: AppColors.primary),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      entry.employeeName,
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(
+                                      '${entry.timestamp} - ${_getLocalizedStatus(entry.type == 'exit' ? 'checked_out' : entry.status)}',
+                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  '${entry.timestamp} - ${_getLocalizedStatus(entry.type == 'exit' ? 'checked_out' : entry.status)}',
-                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                ),
-                              ],
-                            ),
+                              ),
+                              if (entry.type != 'failure')
+                                const Icon(Icons.check_circle, color: AppColors.success)
+                              else
+                                const Icon(Icons.error, color: AppColors.error),
+                            ],
                           ),
-                          if (entry.type != 'failure')
-                            const Icon(Icons.check_circle, color: AppColors.success)
-                          else
-                            const Icon(Icons.error, color: AppColors.error),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-            ],
-          ],
+                        ),
+                      );
+                    }),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
       floatingActionButton: Container(
@@ -206,6 +209,26 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildSummaryGrid({required int columns, required List<Widget> children}) {
+    final List<Widget> rows = [];
+    for (var i = 0; i < children.length; i += columns) {
+      final rowChildren = children.sublist(i, min(i + columns, children.length));
+      rows.add(
+        Row(
+          children: [
+            ...rowChildren.map((child) => Expanded(child: child)),
+            // Add spacers if the row is not full
+            ...List.generate(columns - rowChildren.length, (index) => const Spacer()),
+          ],
+        ),
+      );
+      if (i + columns < children.length) {
+        rows.add(const SizedBox(height: 16));
+      }
+    }
+    return Column(children: rows);
   }
 
   void _showQuickActions(BuildContext context, String? role) {
@@ -299,58 +322,53 @@ class _SummaryCard extends StatelessWidget {
   final String title;
   final String value;
   final Color color;
-  final bool isFullWidth;
   final VoidCallback? onTap;
 
   const _SummaryCard({
     required this.title,
     required this.value,
     required this.color,
-    this.isFullWidth = false,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final card = NeumorphicCard(
-      padding: EdgeInsets.zero,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: NeumorphicCard(
+        padding: EdgeInsets.zero,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: color,
+                const SizedBox(height: 12),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
-
-    if (isFullWidth) {
-      return SizedBox(width: double.infinity, child: card);
-    } else {
-      return Expanded(child: card);
-    }
   }
 }
 

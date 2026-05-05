@@ -23,6 +23,7 @@ class OrgSettings(BaseModel):
 class OrgBase(BaseModel):
     name: str
     type: OrgType
+    admin_email: Optional[str] = None
     logo_url: Optional[str] = None
     recognition_threshold: Optional[float] = Field(None, ge=0.0, le=1.0)
     settings: Optional[OrgSettings] = Field(default_factory=OrgSettings)

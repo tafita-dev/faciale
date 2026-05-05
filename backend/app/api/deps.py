@@ -13,6 +13,8 @@ from app.repositories.attendance import AttendanceRepository
 from app.repositories.employee import EmployeeRepository
 from app.repositories.org import OrgRepository
 from app.repositories.department import DepartmentRepository
+from app.repositories.user import UserRepository
+from app.services.notification import NotificationService
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login"
@@ -108,9 +110,25 @@ async def check_only_user(current_user: dict = Depends(get_current_user)) -> dic
         )
     return current_user
 
+def get_user_repository() -> UserRepository:
+    return UserRepository()
+
+def get_notification_service() -> NotificationService:
+    return NotificationService()
+
 def get_attendance_service(
     recognition_service: RecognitionService = Depends(get_recognition_service),
     attendance_repo: AttendanceRepository = Depends(get_attendance_repository),
-    org_repo: OrgRepository = Depends(get_org_repository)
+    org_repo: OrgRepository = Depends(get_org_repository),
+    user_repo: UserRepository = Depends(get_user_repository),
+    employee_repo: EmployeeRepository = Depends(get_employee_repository),
+    notification_service: NotificationService = Depends(get_notification_service)
 ) -> AttendanceService:
-    return AttendanceService(recognition_service, attendance_repo, org_repo)
+    return AttendanceService(
+        recognition_service, 
+        attendance_repo, 
+        org_repo, 
+        user_repo, 
+        employee_repo, 
+        notification_service
+    )

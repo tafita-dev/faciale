@@ -17,8 +17,21 @@ class AttendanceRepository:
     async def init_indexes(self):
         import pymongo
         await self.collection.create_index([("timestamp", pymongo.DESCENDING)])
-        await self.collection.create_index([("employee_id", pymongo.ASCENDING)])
+        await self.collection.create_index([("employee_id", pymongo.ASCENDING), ("timestamp", pymongo.DESCENDING)])
         await self.collection.create_index([("org_id", pymongo.ASCENDING)])
+
+    async def count_logs_today(self, org_id: str, employee_id: str) -> int:
+        """Count successful logs for an employee today."""
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
+        start_of_today = datetime.combine(now.date(), datetime.min.time()).replace(tzinfo=timezone.utc)
+        
+        return await self.collection.count_documents({
+            "org_id": org_id,
+            "employee_id": employee_id,
+            "status": {"$in": ["success", "present", "late"]},
+            "timestamp": {"$gte": start_of_today}
+        })
 
     async def get_last_success_log(self, org_id: str, employee_id: str) -> Optional[AttendanceLog]:
         import pymongo
@@ -169,13 +182,7 @@ class AttendanceRepository:
                                 "$cond": {
                                     "if": {"$eq": ["$status", "failed"]},
                                     "then": "failure",
-                                    "else": {
-                                        "$cond": {
-                                            "if": {"$and": [{"$gt": ["$check_out", None]}, {"$ne": ["$check_out", None]}]},
-                                            "then": "exit",
-                                            "else": "entry"
-                                        }
-                                    }
+                                    "else": {"$ifNull": ["$attendance_type", "entry"]}
                                 }
                             }
                         }

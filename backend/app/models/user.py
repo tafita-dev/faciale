@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, ConfigDict, Field
-from typing import Optional
+from typing import Optional, List
 import uuid
 from datetime import datetime, timezone
 
@@ -9,6 +9,7 @@ class UserBase(BaseModel):
     role: str = "user" # superadmin, admin, user
     org_id: Optional[str] = None
     photo_url: Optional[str] = None
+    fcm_tokens: List[str] = []
 
 class UserCreate(BaseModel):
     email: EmailStr

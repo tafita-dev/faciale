@@ -4,7 +4,7 @@ from app.repositories.attendance import AttendanceRepository
 from app.repositories.org import OrgRepository
 from app.repositories.user import UserRepository
 from app.repositories.employee import EmployeeRepository
-from app.models.attendance import AttendanceLog, AttendanceStatus, AttendanceReason
+from app.models.attendance import AttendanceLog, AttendanceStatus, AttendanceReason, AttendanceType
 import numpy as np
 from datetime import datetime, timezone, time
 
@@ -78,65 +78,55 @@ class AttendanceService:
             employee_id = rec_result["employee_id"]
             now = datetime.now(timezone.utc)
             
-            # Check for open session
-            open_log = await self.attendance_repo.find_open_log(org_id, employee_id)
+            # Toggling logic: count successful logs today
+            count = await self.attendance_repo.count_logs_today(org_id, employee_id)
+            att_type = AttendanceType.entry if count % 2 == 0 else AttendanceType.exit
             
-            if open_log:
-                # Close session (Exit)
-                await self.attendance_repo.update_log(open_log.id, {
-                    "check_out": now,
-                    "timestamp": now, # Update timestamp for recent activity
-                    "user_id": user_id
-                })
-                return {
-                    "status": "success",
-                    "type": "exit",
-                    "employee_id": employee_id,
-                    "score": rec_result["score"]
-                }
-            else:
-                # Open new session (Entry)
+            # Determine status (Entry/Late for entry, success for exit)
+            if att_type == AttendanceType.entry:
                 status = await self._get_entry_status(org_id, now)
-                log = AttendanceLog(
-                    org_id=org_id,
-                    employee_id=employee_id,
-                    user_id=user_id,
-                    status=status,
-                    confidence_score=rec_result["score"],
-                    check_in=now,
-                    timestamp=now
-                )
-                created_log = await self.attendance_repo.create_log(log)
+            else:
+                status = AttendanceStatus.success
 
-                # Send notification if late
-                if status == AttendanceStatus.late:
-                    try:
-                        admins = await self.user_repo.get_org_admins(org_id)
-                        admin_tokens = []
-                        for admin in admins:
-                            admin_tokens.extend(admin.get("fcm_tokens", []))
+            log = AttendanceLog(
+                org_id=org_id,
+                employee_id=employee_id,
+                user_id=user_id,
+                status=status,
+                attendance_type=att_type,
+                confidence_score=rec_result["score"],
+                timestamp=now
+            )
+            created_log = await self.attendance_repo.create_log(log)
+
+            # Send notification if late (only for entry)
+            if att_type == AttendanceType.entry and status == AttendanceStatus.late:
+                try:
+                    admins = await self.user_repo.get_org_admins(org_id)
+                    admin_tokens = []
+                    for admin in admins:
+                        admin_tokens.extend(admin.get("fcm_tokens", []))
+                    
+                    if admin_tokens:
+                        employee = await self.employee_repo.get_employee(employee_id)
+                        org = await self.org_repo.get_org(org_id)
                         
-                        if admin_tokens:
-                            employee = await self.employee_repo.get_employee(employee_id)
-                            org = await self.org_repo.get_org(org_id)
-                            
-                            await self.notification_service.notify_late_arrival(
-                                admin_tokens=admin_tokens,
-                                employee_name=employee.name if employee else "Employee",
-                                org_name=org.name if org else "Organization",
-                                log_id=str(created_log.id)
-                            )
-                    except Exception as e:
-                        # Don't fail the attendance process if notification fails
-                        import logging
-                        logging.getLogger(__name__).error(f"Failed to send late notification: {e}")
+                        await self.notification_service.notify_late_arrival(
+                            admin_tokens=admin_tokens,
+                            employee_name=employee.name if employee else "Employee",
+                            org_name=org.name if org else "Organization",
+                            log_id=str(created_log.id)
+                        )
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).error(f"Failed to send late notification: {e}")
 
-                return {
-                    "status": status,
-                    "type": "entry",
-                    "employee_id": employee_id,
-                    "score": rec_result["score"]
-                }
+            return {
+                "status": status,
+                "type": att_type,
+                "employee_id": employee_id,
+                "score": rec_result["score"]
+            }
         else:
             log = AttendanceLog(
                 org_id=org_id,

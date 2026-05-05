@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:faciale/core/widgets/neumorphic_button.dart';
 import 'package:faciale/features/employees/enroll_screen.dart';
-import 'package:faciale/features/employees/camera_actions.dart';
+import 'package:faciale/features/organizations/department_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() {
@@ -27,10 +27,13 @@ void main() {
       ],
     );
 
+    final mockDept = Department(id: 'd1', name: 'Engineering');
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           capturePhotoProvider.overrideWithValue((context) async => 'fake_path.jpg'),
+          departmentProvider.overrideWith(() => MockDeptNotifier([mockDept])),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -38,27 +41,69 @@ void main() {
       ),
     );
 
+    await tester.pumpAndSettle();
+
     // Verify UI elements
     expect(find.text('employee_enrollment'), findsOneWidget);
-    expect(find.byType(TextFormField), findsOneWidget); // Name field
+    expect(find.byType(TextFormField), findsNWidgets(2)); // Name and Email fields
     expect(find.byType(DropdownButtonFormField<String>), findsOneWidget); // Dept field
     expect(find.text('capture_reference_photo'), findsOneWidget);
     expect(find.widgetWithText(NeumorphicButton, 'SAVE'), findsOneWidget);
 
     // 1. Trigger validation without any data
-    await tester.tap(find.widgetWithText(NeumorphicButton, 'SAVE'));
+    final saveButton = find.widgetWithText(NeumorphicButton, 'SAVE');
+    await tester.ensureVisible(saveButton);
+    await tester.tap(saveButton);
     await tester.pump();
 
     expect(find.text('please_enter_name'), findsOneWidget);
     expect(find.text('please_select_department'), findsOneWidget);
     
-    // 2. Fill fields but no photo
-    await tester.enterText(find.byType(TextFormField), 'John Doe');
+    // 2. Fill fields
+    final nameField = find.widgetWithText(TextFormField, 'full_name');
+    await tester.ensureVisible(nameField);
+    await tester.enterText(nameField, 'John Doe');
+    
+    final emailField = find.widgetWithText(TextFormField, 'email');
+    await tester.ensureVisible(emailField);
+    await tester.enterText(emailField, 'john@test.com');
+    
     // Select department
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    final deptDropdown = find.byType(DropdownButtonFormField<String>);
+    await tester.ensureVisible(deptDropdown);
+    await tester.tap(deptDropdown);
     await tester.pumpAndSettle();
     
-    // Mock departments would be needed for the dropdown to have items
-    // But since it's a unit-ish widget test, we might need to override the department provider
+    await tester.tap(find.text('Engineering').last);
+    await tester.pumpAndSettle();
+
+    // Capture photo
+    final photoBox = find.text('capture_reference_photo');
+    await tester.ensureVisible(photoBox);
+    await tester.tap(photoBox);
+    await tester.pump();
+
+    expect(find.text('photo_captured'), findsOneWidget);
+
+    // Submit
+    await tester.ensureVisible(saveButton);
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    // Should redirect to employees list (mocked as text 'Employee List')
+    expect(find.text('Employee List'), findsOneWidget);
   });
+}
+
+class MockDeptNotifier extends DepartmentNotifier {
+  final List<Department> initialDepartments;
+  MockDeptNotifier(this.initialDepartments);
+
+  @override
+  DeptState build() {
+    return DeptState(departments: initialDepartments);
+  }
+
+  @override
+  Future<void> fetchDepartments() async {}
 }

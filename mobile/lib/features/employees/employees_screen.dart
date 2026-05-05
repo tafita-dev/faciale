@@ -98,25 +98,30 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
           preferredSize: const Size.fromHeight(80),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-            child: NeumorphicCard(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              borderRadius: 30,
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) => setState(() => _searchQuery = value),
-                decoration: InputDecoration(
-                  hintText: 'search_by_name'.tr(),
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
+            child: Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: NeumorphicCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  borderRadius: 30,
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    decoration: InputDecoration(
+                      hintText: 'search_by_name'.tr(),
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -150,23 +155,49 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
                     await ref.read(employeeProvider.notifier).fetchEmployees();
                     await ref.read(departmentProvider.notifier).fetchDepartments();
                   },
-                  child: filteredEmployees.isEmpty
-                      ? Center(child: Text('no_employees_found'.tr()))
-                      : _buildEmployeeList(filteredEmployees, deptState.departments),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      if (filteredEmployees.isEmpty) {
+                        return Center(child: Text('no_employees_found'.tr()));
+                      }
+                      return Center(
+                        child: Container(
+                          constraints: const BoxConstraints(maxWidth: 1200),
+                          child: _buildEmployeeList(filteredEmployees, deptState.departments, constraints.maxWidth),
+                        ),
+                      );
+                    },
+                  ),
                 ),
     );
   }
 
-  Widget _buildEmployeeList(List<Employee> employees, List<Department> depts) {
+  Widget _buildEmployeeList(List<Employee> employees, List<Department> depts, double maxWidth) {
+    final int crossAxisCount = maxWidth > 900 ? 3 : (maxWidth > 600 ? 2 : 1);
+
     if (!_groupByDept) {
-      return ListView.builder(
-        padding: const EdgeInsets.all(24),
-        itemCount: employees.length,
-        itemBuilder: (context, index) => Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: _buildEmployeeTile(employees[index], depts),
-        ),
-      );
+      if (crossAxisCount == 1) {
+        return ListView.builder(
+          padding: const EdgeInsets.all(24),
+          itemCount: employees.length,
+          itemBuilder: (context, index) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _buildEmployeeTile(employees[index], depts),
+          ),
+        );
+      } else {
+        return GridView.builder(
+          padding: const EdgeInsets.all(24),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            mainAxisExtent: 100,
+          ),
+          itemCount: employees.length,
+          itemBuilder: (context, index) => _buildEmployeeTile(employees[index], depts),
+        );
+      }
     }
 
     // Grouping logic
@@ -183,38 +214,63 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
         return nameA.compareTo(nameB);
       });
 
-    // Flatten the list for better performance with ListView.builder
-    final List<dynamic> flattenedItems = [];
+    final List<Widget> slivers = [];
+
     for (var deptId in sortedDeptIds) {
       final deptName = depts.firstWhere((d) => d.id == deptId, orElse: () => Department(id: deptId, name: 'Unknown')).name;
-      flattenedItems.add(deptName); // Use String as header marker
-      flattenedItems.addAll(grouped[deptId]!);
-    }
+      final deptEmployees = grouped[deptId]!;
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(24),
-      itemCount: flattenedItems.length,
-      itemBuilder: (context, index) {
-        final item = flattenedItems[index];
-        if (item is String) {
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
+      slivers.add(
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 24, 8, 16),
             child: Text(
-              item.toUpperCase(),
+              deptName.toUpperCase(),
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: AppColors.primary,
                 letterSpacing: 1.2,
               ),
             ),
-          );
-        } else {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: _buildEmployeeTile(item as Employee, depts),
-          );
-        }
-      },
+          ),
+        ),
+      );
+
+      if (crossAxisCount == 1) {
+        slivers.add(
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildEmployeeTile(deptEmployees[index], depts),
+              ),
+              childCount: deptEmployees.length,
+            ),
+          ),
+        );
+      } else {
+        slivers.add(
+          SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              mainAxisExtent: 100,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => _buildEmployeeTile(deptEmployees[index], depts),
+              childCount: deptEmployees.length,
+            ),
+          ),
+        );
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: CustomScrollView(
+        slivers: slivers,
+      ),
     );
   }
 

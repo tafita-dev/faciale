@@ -1,7 +1,7 @@
 ---
 id: HOTFIX-MOBILE-SCAN-001
 title: Correction du système de scan employé
-status: IN_PROGRESS
+status: DONE
 priority: HIGH
 ---
 

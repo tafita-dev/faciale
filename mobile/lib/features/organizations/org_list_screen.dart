@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/neumorphic_card.dart';
 import 'org_provider.dart';
@@ -144,47 +145,78 @@ class _OrgListScreenState extends ConsumerState<OrgListScreen> {
                         ],
                       ),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(24),
-                      itemCount: state.orgs.length,
-                      itemBuilder: (context, index) {
-                        final org = state.orgs[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: NeumorphicCard(
-                            padding: const EdgeInsets.all(8),
-                            child: ListTile(
-                              leading: NeumorphicCard(
-                                padding: const EdgeInsets.all(8),
-                                borderRadius: 12,
-                                child:
-                                    const Icon(Icons.business, color: AppColors.primary),
-                              ),
-                              title: Text(org.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text(org.type.toUpperCase(), style: const TextStyle(fontSize: 12)),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit,
-                                        color: AppColors.primary),
-                                    onPressed: () => _showEditDialog(
-                                        org.id, org.name, org.type),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete,
-                                        color: AppColors.error),
-                                    onPressed: () =>
-                                        _showDeleteConfirmation(org.id, org.name),
-                                  ),
-                                ],
-                              ),
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final int crossAxisCount = constraints.maxWidth > 900 ? 3 : (constraints.maxWidth > 600 ? 2 : 1);
+                        
+                        if (crossAxisCount == 1) {
+                          return ListView.builder(
+                            padding: const EdgeInsets.all(24),
+                            itemCount: state.orgs.length,
+                            itemBuilder: (context, index) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: _buildOrgTile(state.orgs[index]),
+                              );
+                            },
+                          );
+                        } else {
+                          return GridView.builder(
+                            padding: const EdgeInsets.all(24),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                              mainAxisExtent: 80,
                             ),
-                          ),
-                        );
+                            itemCount: state.orgs.length,
+                            itemBuilder: (context, index) => _buildOrgTile(state.orgs[index]),
+                          );
+                        }
                       },
                     ),
             ),
+    );
+  }
+
+  Widget _buildOrgTile(dynamic org) {
+    return NeumorphicCard(
+      padding: const EdgeInsets.all(8),
+      child: ListTile(
+        leading: NeumorphicCard(
+          padding: const EdgeInsets.all(8),
+          borderRadius: 12,
+          child: org.logoUrl != null && org.logoUrl!.isNotEmpty
+              ? CachedNetworkImage(
+                  imageUrl: org.logoUrl!,
+                  width: 24,
+                  height: 24,
+                  fit: BoxFit.contain,
+                  placeholder: (context, url) =>
+                      const Icon(Icons.business, color: AppColors.primary),
+                  errorWidget: (context, url, error) =>
+                      const Icon(Icons.business, color: AppColors.primary),
+                )
+              : const Icon(Icons.business, color: AppColors.primary),
+        ),
+        title: Text(org.name,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(org.adminEmail ?? '',
+            style: const TextStyle(fontSize: 12)),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit, color: AppColors.primary),
+              onPressed: () => _showEditDialog(org.id, org.name, org.type),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: AppColors.error),
+              onPressed: () => _showDeleteConfirmation(org.id, org.name),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

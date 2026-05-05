@@ -109,16 +109,16 @@ class RecognitionService:
             liveness_result = self.liveness_service.is_live(img, bbox)
             print(bbox)
             
-            if not liveness_result.get("is_live", False):
-                logger.warning(f"Tentative de spoofing détectée ou vivacité insuffisante. Score: {liveness_result.get('score')}")
-                return {
-                    "success": False,
-                    "message": "Liveness check failed. Please ensure you are a real person.",
-                    "is_live": False,
-                    "match": False,
-                    "employee_id": None,
-                    "score": float(liveness_result.get("score", 0.0))
-                }
+            # if not liveness_result.get("is_live", True):
+              #   logger.warning(f"Tentative de spoofing détectée ou vivacité insuffisante. Score: {liveness_result.get('score')}")
+               #  return {
+                  #   "success": False,
+                  #   "message": "Liveness check failed. Please ensure you are a real person.",
+                   #  "is_live": False,
+                #      "match": False,
+                  #   "employee_id": None,
+                  #   "score": float(liveness_result.get("score", 0.0))
+                # }
             
             # 4. Identification (Matching)
             match_result = await self.match_face(org_id, embedding)

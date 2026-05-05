@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     # SuperAdmin
     SUPERADMIN_PASSWORD: str = "admin"
 
+    # Notifications
+    FIREBASE_CREDENTIALS_PATH: str | None = None
+
     model_config = SettingsConfigDict(
         case_sensitive=True,
         env_file=".env"

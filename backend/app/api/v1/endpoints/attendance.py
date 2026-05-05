@@ -55,52 +55,42 @@ async def check_in(
             }
         )
     
-    if result["status"] == "failed":
-        if result["reason"] == "spoof_detected":
-            return {
-                "success": False,
-                "message": "Liveness failed. Please try again.",
-                "data": {"score": result["score"]}
-            }
-        elif result["reason"] == "no_match":
-            return {
-                "success": False,
-                "message": "User not found.",
-                "data": {"score": result["score"]}
-            }
+    # Handle service-level failures (Spoofing or No Match)
+    if result.get("status") == "failed":
+        reason = result.get("reason")
+        message = "Attendance failed."
+        if reason == "spoof_detected":
+            message = "Liveness failed. Please try again."
+        elif reason == "no_match":
+            message = "User not found."
             
-    # 3. Handle success and Debouncing
-    employee_id = result["employee_id"]
-    
-    # Check for recent successful check-in (Debouncing)
-    last_log = await attendance_repo.get_last_success_log(org_id, employee_id)
-    if last_log:
-        now = datetime.now(timezone.utc)
-        diff = (now - last_log.timestamp).total_seconds()
-        if diff < 60:
-            return {
-                "success": False,
-                "message": f"Already checked in {int(diff)} seconds ago.",
-                "data": {
-                    "employee_id": employee_id,
-                    "timestamp": last_log.timestamp
-                }
-            }
+        return {
+            "success": False,
+            "message": message,
+            "data": {"score": result.get("score", 0)}
+        }
             
     # Fetch employee name for the response
     employee = await employee_repo.get_employee(employee_id)
     employee_name = employee.name if employee else "Unknown"
-    
-    action = "checked in" if result.get("type") == "entry" else "checked out"
-    
+
+    # Determine the action type (defaulting to entry)
+    action_type = result.get("type", "entry")
+
+    # Message based on type
+    if action_type == "entry":
+        message = f"Bienvenue {employee_name}"
+    else:
+        message = f"Au revoir {employee_name}"
+
     return {
         "success": True,
-        "message": f"Success: {employee_name} {action}.",
+        "message": message,
         "data": {
             "employee_id": employee_id,
             "employee_name": employee_name,
-            "type": result.get("type"),
-            "score": result["score"],
+            "type": action_type, 
+            "score": result.get("score"),
             "timestamp": datetime.now(timezone.utc)
         }
     }

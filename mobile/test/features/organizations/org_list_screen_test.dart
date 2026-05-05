@@ -9,6 +9,7 @@ import 'package:faciale/features/auth/auth_state.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mockito/mockito.dart';
 import 'package:http/http.dart' as http;
+import 'package:cached_network_image/cached_network_image.dart';
 import '../auth/auth_provider_test.mocks.dart';
 
 class MockAuthNotifier extends Notifier<AuthState> implements AuthNotifier {
@@ -59,8 +60,20 @@ void main() {
 
   testWidgets('renders list of organizations', (WidgetTester tester) async {
     final orgsJson = [
-      {'_id': '1', 'name': 'Org 1', 'type': 'school', 'created_at': DateTime.now().toIso8601String()},
-      {'_id': '2', 'name': 'Org 2', 'type': 'company', 'created_at': DateTime.now().toIso8601String()},
+      {
+        '_id': '1', 
+        'name': 'Org 1', 
+        'type': 'school', 
+        'admin_email': 'admin1@test.com',
+        'created_at': DateTime.now().toIso8601String()
+      },
+      {
+        '_id': '2', 
+        'name': 'Org 2', 
+        'type': 'company', 
+        'admin_email': 'admin2@test.com',
+        'created_at': DateTime.now().toIso8601String()
+      },
     ];
 
     when(mockClient.get(any, headers: anyNamed('headers')))
@@ -70,9 +83,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Org 1'), findsOneWidget);
-    expect(find.text('SCHOOL'), findsOneWidget);
+    expect(find.text('admin1@test.com'), findsOneWidget);
     expect(find.text('Org 2'), findsOneWidget);
-    expect(find.text('COMPANY'), findsOneWidget);
+    expect(find.text('admin2@test.com'), findsOneWidget);
   });
 
   testWidgets('shows empty state when no organizations', (WidgetTester tester) async {
@@ -153,7 +166,13 @@ void main() {
     // Refresh mock after update
     when(mockClient.get(any, headers: anyNamed('headers')))
         .thenAnswer((_) async => http.Response(jsonEncode([
-          {'_id': '1', 'name': 'Org 1 Updated', 'type': 'company', 'created_at': DateTime.now().toIso8601String()},
+          {
+            '_id': '1', 
+            'name': 'Org 1 Updated', 
+            'type': 'company', 
+            'admin_email': 'admin@test.com',
+            'created_at': DateTime.now().toIso8601String()
+          },
         ]), 200));
 
     await tester.tap(find.text('save'));
@@ -161,6 +180,47 @@ void main() {
 
     expect(find.text('organization_updated_successfully'), findsOneWidget);
     expect(find.text('Org 1 Updated'), findsOneWidget);
-    expect(find.text('COMPANY'), findsOneWidget);
+    expect(find.text('admin@test.com'), findsOneWidget);
+  });
+
+  testWidgets('displays organization logo when available', (WidgetTester tester) async {
+    final orgsJson = [
+      {
+        '_id': '1',
+        'name': 'Org with Logo',
+        'type': 'school',
+        'logo_url': 'http://example.com/logo.png',
+        'created_at': DateTime.now().toIso8601String()
+      },
+    ];
+
+    when(mockClient.get(any, headers: anyNamed('headers')))
+        .thenAnswer((_) async => http.Response(jsonEncode(orgsJson), 200));
+
+    await tester.pumpWidget(createWidgetUnderTest());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CachedNetworkImage), findsOneWidget);
+  });
+
+  testWidgets('displays default icon when logo is not available', (WidgetTester tester) async {
+    final orgsJson = [
+      {
+        '_id': '1',
+        'name': 'Org without Logo',
+        'type': 'school',
+        'logo_url': null,
+        'created_at': DateTime.now().toIso8601String()
+      },
+    ];
+
+    when(mockClient.get(any, headers: anyNamed('headers')))
+        .thenAnswer((_) async => http.Response(jsonEncode(orgsJson), 200));
+
+    await tester.pumpWidget(createWidgetUnderTest());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(find.byIcon(Icons.business), findsOneWidget);
   });
 }

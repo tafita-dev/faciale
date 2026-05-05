@@ -100,36 +100,34 @@ class _DepartmentManagementScreenState
                   ref.read(departmentProvider.notifier).fetchDepartments(),
               child: state.departments.isEmpty
                   ? Center(child: Text('no_departments_found'.tr()))
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(24),
-                      itemCount: state.departments.length,
-                      itemBuilder: (context, index) {
-                        final dept = state.departments[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: NeumorphicCard(
-                            padding: const EdgeInsets.all(8),
-                            child: ListTile(
-                              title: Text(dept.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit,
-                                        color: AppColors.primary),
-                                    onPressed: () => _showDepartmentDialog(dept),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete,
-                                        color: AppColors.error),
-                                    onPressed: () =>
-                                        _showDeleteConfirmation(dept.id, dept.name),
-                                  ),
-                                ],
-                              ),
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final int crossAxisCount = constraints.maxWidth > 900 ? 3 : (constraints.maxWidth > 600 ? 2 : 1);
+                        
+                        if (crossAxisCount == 1) {
+                          return ListView.builder(
+                            padding: const EdgeInsets.all(24),
+                            itemCount: state.departments.length,
+                            itemBuilder: (context, index) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: _buildDepartmentTile(state.departments[index]),
+                              );
+                            },
+                          );
+                        } else {
+                          return GridView.builder(
+                            padding: const EdgeInsets.all(24),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                              mainAxisExtent: 70,
                             ),
-                          ),
-                        );
+                            itemCount: state.departments.length,
+                            itemBuilder: (context, index) => _buildDepartmentTile(state.departments[index]),
+                          );
+                        }
                       },
                     ),
             ),
@@ -155,6 +153,28 @@ class _DepartmentManagementScreenState
           onPressed: () => _showDepartmentDialog(),
           tooltip: 'add_department'.tr(),
           child: const Icon(Icons.add, color: AppColors.primary),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDepartmentTile(Department dept) {
+    return NeumorphicCard(
+      padding: const EdgeInsets.all(8),
+      child: ListTile(
+        title: Text(dept.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit, color: AppColors.primary),
+              onPressed: () => _showDepartmentDialog(dept),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: AppColors.error),
+              onPressed: () => _showDeleteConfirmation(dept.id, dept.name),
+            ),
+          ],
         ),
       ),
     );
