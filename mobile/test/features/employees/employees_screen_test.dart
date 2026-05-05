@@ -69,9 +69,9 @@ void main() {
   }
 
   final mockEmployees = [
-    {'_id': '1', 'name': 'John Doe', 'dept_id': 'd1', 'is_enrolled': true},
-    {'_id': '2', 'name': 'Jane Smith', 'dept_id': 'd1', 'is_enrolled': true},
-    {'_id': '3', 'name': 'Bob Wilson', 'dept_id': 'd2', 'is_enrolled': false},
+    {'_id': '1', 'name': 'John Doe', 'email': 'john@test.com', 'dept_id': 'd1', 'is_enrolled': true},
+    {'_id': '2', 'name': 'Jane Smith', 'email': 'jane@test.com', 'dept_id': 'd1', 'is_enrolled': true},
+    {'_id': '3', 'name': 'Bob Wilson', 'email': 'bob@test.com', 'dept_id': 'd2', 'is_enrolled': false},
   ];
 
   final mockDepts = [
@@ -107,8 +107,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('John Doe'), findsOneWidget);
+    expect(find.text('john@test.com'), findsOneWidget);
     expect(find.text('Jane Smith'), findsOneWidget);
+    expect(find.text('jane@test.com'), findsOneWidget);
     expect(find.text('Bob Wilson'), findsOneWidget);
+    expect(find.text('bob@test.com'), findsOneWidget);
   });
 
   testWidgets('filters employees by department', (WidgetTester tester) async {

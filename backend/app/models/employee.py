@@ -6,6 +6,7 @@ import uuid
 class EmployeeBase(BaseModel):
     name: str
     dept_id: str
+    email: Optional[str] = None
 
 class EmployeeCreate(EmployeeBase):
     pass

@@ -43,6 +43,7 @@ async def create_employee(
         "_id": str(uuid.uuid4()),
         "name": employee_in.name,
         "dept_id": employee_in.dept_id,
+        "email": employee_in.email,
         "org_id": org_id,
         "created_by": current_user["_id"],
         "is_active": True,

@@ -57,9 +57,19 @@ class EmployeeTile extends StatelessWidget {
           employee.name,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: Text(
-          departmentName,
-          style: const TextStyle(fontSize: 12),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (employee.email != null && employee.email!.isNotEmpty)
+              Text(
+                employee.email!,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            Text(
+              departmentName,
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
         ),
         trailing: trailing,
       ),

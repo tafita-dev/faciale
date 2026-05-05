@@ -37,6 +37,7 @@ class EmployeeState {
 class Employee {
   final String id;
   final String name;
+  final String? email;
   final String deptId;
   final bool isEnrolled;
   final String? photoUrl;
@@ -44,6 +45,7 @@ class Employee {
   Employee({
     required this.id,
     required this.name,
+    this.email,
     required this.deptId,
     required this.isEnrolled,
     this.photoUrl,
@@ -53,6 +55,7 @@ class Employee {
     return Employee(
       id: json['_id'] as String,
       name: json['name'] as String,
+      email: json['email'] as String?,
       deptId: json['dept_id'] as String,
       isEnrolled: json['is_enrolled'] as bool? ?? false,
       photoUrl: json['photo_url'] as String?,
@@ -157,6 +160,7 @@ class EmployeeNotifier extends Notifier<EmployeeState> {
   Future<void> createAndEnrollEmployee({
     required String name,
     required String deptId,
+    String? email,
     required String imagePath,
   }) async {
     state = state.copyWith(isLoading: true, error: null, isSuccess: false);
@@ -175,6 +179,7 @@ class EmployeeNotifier extends Notifier<EmployeeState> {
         body: jsonEncode({
           'name': name,
           'dept_id': deptId,
+          if (email != null && email.isNotEmpty) 'email': email,
         }),
       );
 
