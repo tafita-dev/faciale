@@ -59,5 +59,17 @@
 ## [Epic 10] UX Refinement & Extended Management
 
 - **Goal:** Enhance administrative CRUDs, implement multi-language support, and apply Neumorphism design.
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Ref:** User Request (April 2026)
+
+## [Epic 11] Shift Management & Push Notifications
+
+- **Goal:** Implement configurable work/school hours and real-time notifications for check-ins and late arrivals.
+- **Status:** IN_PROGRESS
+- **Ref:** PRD Feature: Attendance via Facial Recognition (Enhanced)
+
+## [Epic 12] Branding & Advanced UI/UX Optimization
+
+- **Goal:** Modernize UI with "I-POINTEO" branding, role-based profile displays, and enhanced data visualization with photos/logos.
+- **Status:** IN_PROGRESS
+- **Ref:** User Request (April 2026) - Branding & UX Polish

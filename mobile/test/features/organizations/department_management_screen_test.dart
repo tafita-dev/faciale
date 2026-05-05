@@ -39,6 +39,9 @@ class MockAuthNotifier extends Notifier<AuthState> implements AuthNotifier {
   Future<void> requestPasswordReset(String email) async {}
 
   @override
+  Future<void> fetchProfile() async {}
+
+  @override
   void resetStatus() {}
 }
 
@@ -103,7 +106,7 @@ void main() {
             headers: anyNamed('headers')))
         .thenAnswer((_) async => http.Response(jsonEncode([...mockDepts, {'_id': 'd3', 'name': 'Marketing'}]), 200));
 
-    await tester.tap(find.text('Save'));
+    await tester.tap(find.text('save'));
     await tester.pumpAndSettle();
 
     expect(find.text('Marketing'), findsOneWidget);
@@ -132,7 +135,7 @@ void main() {
             headers: anyNamed('headers')))
         .thenAnswer((_) async => http.Response(jsonEncode([{'_id': 'd1', 'name': 'Software Engineering'}, mockDepts[1]]), 200));
 
-    await tester.tap(find.text('Save'));
+    await tester.tap(find.text('save'));
     await tester.pumpAndSettle();
 
     expect(find.text('Software Engineering'), findsOneWidget);
@@ -158,7 +161,7 @@ void main() {
             headers: anyNamed('headers')))
         .thenAnswer((_) async => http.Response(jsonEncode([mockDepts[1]]), 200));
 
-    await tester.tap(find.text('Delete'));
+    await tester.tap(find.text('delete'));
     await tester.pumpAndSettle();
 
     expect(find.text('Engineering'), findsNothing);

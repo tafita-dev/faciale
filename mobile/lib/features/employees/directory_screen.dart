@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
+import '../auth/auth_provider.dart';
 import 'employee_provider.dart';
 import '../organizations/department_provider.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/neumorphic_card.dart';
+import '../../core/widgets/employee_tile.dart';
 
 class DirectoryScreen extends ConsumerStatefulWidget {
   const DirectoryScreen({super.key});
@@ -47,6 +51,7 @@ class _DirectoryScreenState extends ConsumerState<DirectoryScreen> {
   Widget build(BuildContext context) {
     final directoryState = ref.watch(directoryProvider);
     final deptState = ref.watch(departmentProvider);
+    final authState = ref.watch(authProvider);
 
     List<Employee> filteredEmployees = directoryState.employees;
 
@@ -63,39 +68,40 @@ class _DirectoryScreenState extends ConsumerState<DirectoryScreen> {
     }
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Colleagues Directory'),
+        title: Text('colleagues_directory'.tr()),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(110),
+          preferredSize: const Size.fromHeight(120),
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (value) => setState(() => _searchQuery = value),
-                  decoration: InputDecoration(
-                    hintText: 'Search colleagues...',
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                child: NeumorphicCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  borderRadius: 30,
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    decoration: InputDecoration(
+                      hintText: 'search_colleagues'.tr(),
+                      prefixIcon: const Icon(Icons.search),
+                      border: InputBorder.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   ),
                 ),
               ),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4.0),
                 child: Row(
                   children: [
                     ChoiceChip(
-                      label: const Text('All'),
+                      label: Text('all'.tr()),
                       selected: _selectedDeptId == null,
                       onSelected: (_) => setState(() => _selectedDeptId = null),
+                      backgroundColor: AppColors.background,
+                      selectedColor: AppColors.primary.withOpacity(0.2),
                     ),
                     const SizedBox(width: 8),
                     ...deptState.departments.map((dept) => Padding(
@@ -104,12 +110,14 @@ class _DirectoryScreenState extends ConsumerState<DirectoryScreen> {
                             label: Text(dept.name),
                             selected: _selectedDeptId == dept.id,
                             onSelected: (_) => setState(() => _selectedDeptId = dept.id),
+                            backgroundColor: AppColors.background,
+                            selectedColor: AppColors.primary.withOpacity(0.2),
                           ),
                         )),
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
             ],
           ),
         ),
@@ -119,9 +127,10 @@ class _DirectoryScreenState extends ConsumerState<DirectoryScreen> {
           : RefreshIndicator(
               onRefresh: () => ref.read(directoryProvider.notifier).fetchDirectory(),
               child: filteredEmployees.isEmpty
-                  ? const Center(child: Text('No colleagues found'))
+                  ? Center(child: Text('no_colleagues_found'.tr()))
                   : ListView.builder(
                       controller: _scrollController,
+                      padding: const EdgeInsets.all(24),
                       itemCount: filteredEmployees.length + (directoryState.isLoading ? 1 : 0),
                       itemBuilder: (context, index) {
                         if (index == filteredEmployees.length) {
@@ -136,19 +145,12 @@ class _DirectoryScreenState extends ConsumerState<DirectoryScreen> {
                                 orElse: () => Department(id: '', name: 'Unknown'))
                             .name;
 
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: AppColors.accent,
-                              child: Text(
-                                employee.name[0].toUpperCase(),
-                                style: const TextStyle(
-                                    color: AppColors.primary, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            title: Text(employee.name),
-                            subtitle: Text(deptName),
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: EmployeeTile(
+                            employee: employee,
+                            departmentName: deptName,
+                            authToken: authState.token,
                           ),
                         );
                       },

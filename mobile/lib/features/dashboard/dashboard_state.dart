@@ -9,6 +9,7 @@ class DashboardState {
   final List<CheckInEntry> recentCheckIns;
   final bool isLoading;
   final String? error;
+  final CheckInEntry? lastNotification;
 
   DashboardState({
     this.presentToday = 0,
@@ -21,6 +22,7 @@ class DashboardState {
     this.recentCheckIns = const [],
     this.isLoading = false,
     this.error,
+    this.lastNotification,
   });
 
   DashboardState copyWith({
@@ -34,6 +36,7 @@ class DashboardState {
     List<CheckInEntry>? recentCheckIns,
     bool? isLoading,
     String? error,
+    CheckInEntry? lastNotification,
   }) {
     return DashboardState(
       presentToday: presentToday ?? this.presentToday,
@@ -46,18 +49,52 @@ class DashboardState {
       recentCheckIns: recentCheckIns ?? this.recentCheckIns,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
+      lastNotification: lastNotification ?? this.lastNotification,
+    );
+  }
+
+  DashboardState clearNotification() {
+    return DashboardState(
+      presentToday: presentToday,
+      totalEmployees: totalEmployees,
+      lateAbsent: lateAbsent,
+      totalOrganizations: totalOrganizations,
+      totalUsers: totalUsers,
+      totalAdmins: totalAdmins,
+      systemHealth: systemHealth,
+      recentCheckIns: recentCheckIns,
+      isLoading: isLoading,
+      error: error,
+      lastNotification: null,
     );
   }
 }
 
 class CheckInEntry {
+  final String id;
   final String employeeName;
   final String timestamp;
   final String status;
+  final String? reason;
+  final String type; // entry, exit, failure
 
   CheckInEntry({
+    required this.id,
     required this.employeeName,
     required this.timestamp,
     required this.status,
+    this.reason,
+    this.type = 'entry',
   });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CheckInEntry &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          timestamp == other.timestamp;
+
+  @override
+  int get hashCode => id.hashCode ^ timestamp.hashCode;
 }

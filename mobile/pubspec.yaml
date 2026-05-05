@@ -48,6 +48,11 @@ dependencies:
   share_plus: ^10.1.0
   flutter_dotenv: ^5.2.1
   connectivity_plus: ^6.1.1
+  easy_localization: ^3.0.7
+  cached_network_image: ^3.4.1
+  image_picker: ^1.1.2
+  firebase_core: ^4.7.0
+  firebase_messaging: ^16.2.0
 
 dev_dependencies:
   flutter_test:
@@ -75,6 +80,7 @@ flutter:
 
   assets:
     - .env
+    - assets/translations/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

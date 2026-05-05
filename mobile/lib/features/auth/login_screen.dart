@@ -2,7 +2,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/neumorphic_card.dart';
+import '../../core/widgets/neumorphic_button.dart';
+import '../../core/widgets/logo.dart';
 import 'auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -69,11 +73,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.face,
-                size: 100,
-                color: AppColors.primary,
-              ),
+              const Logo(size: 80),
               const SizedBox(height: 48),
               AnimatedBuilder(
                 animation: _shakeController,
@@ -87,59 +87,66 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                 },
                 child: Column(
                   children: [
-                    TextField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: AppColors.primary, width: 2.0),
+                    NeumorphicCard(
+                      isInset: true,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: TextField(
+                        controller: _emailController,
+                        decoration: InputDecoration(
+                          labelText: 'email'.tr(),
+                          border: InputBorder.none,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        border: OutlineInputBorder(),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: AppColors.primary, width: 2.0),
+                    const SizedBox(height: 24),
+                    NeumorphicCard(
+                      isInset: true,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: TextField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: 'password'.tr(),
+                          border: InputBorder.none,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 48),
               SizedBox(
                 width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: authState.isLoading ? null : _handleLogin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: authState.isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
+                child: NeumorphicButton(
+                  onPressed: authState.isLoading ? () {} : _handleLogin,
+                  backgroundColor: AppColors.background,
+                  child: Center(
+                    child: authState.isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'login'.tr().toUpperCase(),
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                            ),
                           ),
-                        )
-                      : const Text('Login'),
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               TextButton(
                 onPressed: () => context.push('/forgot-password'),
-                child: const Text(
-                  'Forgot password?',
-                  style: TextStyle(
+                child: Text(
+                  'forgot_password'.tr(),
+                  style: const TextStyle(
                     color: AppColors.text,
                     decoration: TextDecoration.underline,
                   ),

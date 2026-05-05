@@ -32,7 +32,7 @@ void main() {
     await tester.pumpAndSettle(const Duration(milliseconds: 600));
 
     // Initial state
-    final exportButton = find.byTooltip('Export CSV');
+    final exportButton = find.byTooltip('export_csv');
     expect(exportButton, findsOneWidget);
 
     // Tap export

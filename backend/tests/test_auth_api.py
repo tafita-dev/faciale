@@ -76,7 +76,9 @@ async def test_read_users_me_success():
         "email": "test@example.com",
         "password_hash": hashed_password,
         "role": "admin",
-        "org_id": "org123"
+        "org_id": "org123",
+        "name": "Test User",
+        "photo_url": "http://example.com/photo.jpg"
     }
     
     # Get a token first
@@ -104,7 +106,11 @@ async def test_read_users_me_success():
         )
         
         assert response.status_code == 200
-        assert response.json()["email"] == "test@example.com"
+        data = response.json()
+        assert data["email"] == "test@example.com"
+        assert data["name"] == "Test User"
+        assert data["role"] == "admin"
+        assert data["photo_url"] == "http://example.com/photo.jpg"
 
 @pytest.mark.asyncio
 async def test_read_users_me_unauthorized():

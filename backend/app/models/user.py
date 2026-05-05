@@ -8,6 +8,7 @@ class UserBase(BaseModel):
     name: Optional[str] = None
     role: str = "user" # superadmin, admin, user
     org_id: Optional[str] = None
+    photo_url: Optional[str] = None
 
 class UserCreate(BaseModel):
     email: EmailStr

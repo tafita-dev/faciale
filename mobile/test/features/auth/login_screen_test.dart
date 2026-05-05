@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:faciale/features/auth/login_screen.dart';
 import 'package:faciale/features/auth/auth_provider.dart';
+import 'package:faciale/core/widgets/neumorphic_button.dart';
+import 'package:faciale/core/widgets/logo.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mockito/mockito.dart';
 import 'package:http/http.dart' as http;
@@ -39,11 +41,11 @@ void main() {
       ),
     );
 
-    expect(find.byIcon(Icons.face), findsOneWidget);
-    expect(find.widgetWithText(TextField, 'Email'), findsOneWidget);
-    expect(find.widgetWithText(TextField, 'Password'), findsOneWidget);
-    expect(find.widgetWithText(ElevatedButton, 'Login'), findsOneWidget);
-    expect(find.text('Forgot password?'), findsOneWidget);
+    expect(find.byType(Logo), findsOneWidget);
+    // Note: since easy_localization is not fully initialized in tests, 
+    // it usually returns the key if not mocked.
+    expect(find.byType(TextField), findsNWidgets(2));
+    expect(find.byType(NeumorphicButton), findsOneWidget);
   });
 
   testWidgets('Successful Login redirect placeholder test', (WidgetTester tester) async {
@@ -79,10 +81,10 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.widgetWithText(TextField, 'Email'), 'admin@example.com');
-    await tester.enterText(find.widgetWithText(TextField, 'Password'), 'password');
+    await tester.enterText(find.byType(TextField).first, 'admin@example.com');
+    await tester.enterText(find.byType(TextField).last, 'password');
     
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Login'));
+    await tester.tap(find.byType(NeumorphicButton));
     await tester.pump(); // Start loading
     
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -111,10 +113,10 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.widgetWithText(TextField, 'Email'), 'wrong@example.com');
-    await tester.enterText(find.widgetWithText(TextField, 'Password'), 'wrong');
+    await tester.enterText(find.byType(TextField).first, 'wrong@example.com');
+    await tester.enterText(find.byType(TextField).last, 'wrong');
     
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Login'));
+    await tester.tap(find.byType(NeumorphicButton));
     await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 

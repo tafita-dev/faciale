@@ -42,6 +42,9 @@ class MockAuthNotifier extends Notifier<AuthState> implements AuthNotifier {
   Future<void> requestPasswordReset(String email) async {}
 
   @override
+  Future<void> fetchProfile() async {}
+
+  @override
   void resetStatus() {}
 }
 
@@ -122,7 +125,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Open filter
-    await tester.tap(find.byTooltip('Filter by Department'));
+    await tester.tap(find.byTooltip('filter_by_department'));
     await tester.pumpAndSettle();
 
     // Select Engineering from popup menu
@@ -148,7 +151,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Toggle grouping
-    await tester.tap(find.byTooltip('Toggle Grouping'));
+    await tester.tap(find.byTooltip('toggle_grouping'));
     await tester.pumpAndSettle();
 
     expect(find.text('ENGINEERING'), findsOneWidget); // Group header
@@ -176,7 +179,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Toggle grouping
-    await tester.tap(find.byTooltip('Toggle Grouping'));
+    await tester.tap(find.byTooltip('toggle_grouping'));
     await tester.pumpAndSettle();
 
     // Verify Engineering (d1) comes before HR (d2)

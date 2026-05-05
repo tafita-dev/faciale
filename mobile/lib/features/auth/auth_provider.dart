@@ -48,7 +48,19 @@ class AuthNotifier extends Notifier<AuthState> {
         if (role != null) await storage.write(key: 'user_role', value: role);
         if (orgId != null) await storage.write(key: 'org_id', value: orgId);
 
-        state = state.copyWith(isLoading: false, token: token, role: role, isSuccess: true);
+        state = state.copyWith(
+          token: token, 
+          role: role, 
+          orgId: orgId,
+        );
+
+        // Fetch full profile details
+        await fetchProfile();
+        
+        state = state.copyWith(
+          isLoading: false,
+          isSuccess: true
+        );
       } else if (response.statusCode >= 500) {
         state = state.copyWith(
           isLoading: false,
@@ -66,6 +78,34 @@ class AuthNotifier extends Notifier<AuthState> {
         isLoading: false,
         error: 'Network error. Please check your connection.',
       );
+    }
+  }
+
+  Future<void> fetchProfile() async {
+    final token = state.token;
+    if (token == null) return;
+
+    try {
+      final client = ref.read(httpClientProvider);
+      final response = await client.get(
+        Uri.parse('$_baseUrl/auth/me'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        state = state.copyWith(
+          email: data['email'],
+          name: data['name'],
+          role: data['role'],
+          photoUrl: data['photo_url'],
+          orgId: data['org_id'],
+        );
+      }
+    } catch (e) {
+      // Fail silently for background profile fetch
     }
   }
 

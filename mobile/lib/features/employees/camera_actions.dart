@@ -15,11 +15,16 @@ final capturePhotoProvider = Provider<Future<String?> Function(BuildContext)>((r
       return null;
     }
 
+    final backCamera = cameras.firstWhere(
+  (camera) => camera.lensDirection == CameraLensDirection.back,
+  orElse: () => cameras.first, // Repli sur la première si "back" n'est pas trouvé
+);
+
     // 2. Afficher la boîte de dialogue avec la caméra
     return await showDialog<String>(
       context: context,
       barrierDismissible: false, // Force l'utilisateur à choisir ou annuler via les boutons
-      builder: (context) => CameraPreviewDialog(camera: cameras.first),
+      builder: (context) => CameraPreviewDialog(camera: backCamera),
     );
   };
 });

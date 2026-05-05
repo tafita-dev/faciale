@@ -13,6 +13,9 @@ from app.db.mongodb import (
 from app.db.qdrant import connect_to_qdrant, close_qdrant_connection
 from app.api.v1.api import api_router
 from app.repositories.attendance import AttendanceRepository
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 
 # =========================
 # LOGGER SETUP
@@ -50,9 +53,11 @@ async def lifespan(app: FastAPI):
 
         await db["users"].insert_one({
             "email": superadmin_email.lower().strip(),
+            "name": "Super Admin",
             "password_hash": password_hash,
             "role": "superadmin",
-            "org_id": None
+            "org_id": None,
+            "photo_url": None
         })
 
         logger.info("✅ Superadmin created successfully")
@@ -78,7 +83,25 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+origins = [
+    "*",  # uniquement en dev
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Ensure upload directory exists
+if not os.path.exists(settings.UPLOAD_DIR):
+    os.makedirs(settings.UPLOAD_DIR, mode=0o755, exist_ok=True)
+
+app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 
 # =========================

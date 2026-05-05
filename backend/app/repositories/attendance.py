@@ -26,7 +26,7 @@ class AttendanceRepository:
             {
                 "org_id": org_id,
                 "employee_id": employee_id,
-                "status": "success"
+                "status": {"$in": ["success", "present", "late"]}
             },
             sort=[("timestamp", pymongo.DESCENDING)]
         )
@@ -42,7 +42,7 @@ class AttendanceRepository:
         doc = await self.collection.find_one({
             "org_id": org_id,
             "employee_id": employee_id,
-            "status": "success",
+            "status": {"$in": ["success", "present", "late"]},
             "check_in": {"$exists": True, "$gte": start_of_today},
             "check_out": None
         })
@@ -60,7 +60,7 @@ class AttendanceRepository:
         match_query = {
             "org_id": org_id,
             "timestamp": {"$gte": start_of_today},
-            "status": "success"
+            "status": {"$in": ["success", "present", "late"]}
         }
         if user_id:
             match_query["user_id"] = user_id
@@ -161,7 +161,23 @@ class AttendanceRepository:
                             "department_id": "$employee.dept_id",
                             "timestamp": 1,
                             "status": 1,
-                            "confidence": "$confidence_score"
+                            "reason": 1,
+                            "confidence": "$confidence_score",
+                            "check_in": 1,
+                            "check_out": 1,
+                            "type": {
+                                "$cond": {
+                                    "if": {"$eq": ["$status", "failed"]},
+                                    "then": "failure",
+                                    "else": {
+                                        "$cond": {
+                                            "if": {"$and": [{"$gt": ["$check_out", None]}, {"$ne": ["$check_out", None]}]},
+                                            "then": "exit",
+                                            "else": "entry"
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 ]

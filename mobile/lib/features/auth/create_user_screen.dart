@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/neumorphic_card.dart';
+import '../../core/widgets/neumorphic_button.dart';
 import 'user_provider.dart';
 
 class CreateUserScreen extends ConsumerStatefulWidget {
@@ -42,8 +45,8 @@ class _CreateUserScreenState extends ConsumerState<CreateUserScreen> {
     ref.listen(userProvider, (previous, next) {
       if (next.isSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('User created successfully'),
+          SnackBar(
+            content: Text('user_created_successfully'.tr()),
             backgroundColor: AppColors.success,
           ),
         );
@@ -60,84 +63,101 @@ class _CreateUserScreenState extends ConsumerState<CreateUserScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create User')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(title: Text('create_user'.tr())),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Full Name',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
+              NeumorphicCard(
+                isInset: true,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: TextFormField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    labelText: 'full_name'.tr(),
+                    border: InputBorder.none,
+                    prefixIcon: const Icon(Icons.person),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'name_required'.tr();
+                    }
+                    return null;
+                  },
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Name is required';
-                  }
-                  return null;
-                },
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email),
+              const SizedBox(height: 24),
+              NeumorphicCard(
+                isInset: true,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: TextFormField(
+                  controller: _emailController,
+                  decoration: InputDecoration(
+                    labelText: 'email'.tr(),
+                    border: InputBorder.none,
+                    prefixIcon: const Icon(Icons.email),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'email_required'.tr();
+                    }
+                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                      return 'invalid_email'.tr();
+                    }
+                    return null;
+                  },
                 ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Email is required';
-                  }
-                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                    return 'Please enter a valid email';
-                  }
-                  return null;
-                },
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
+              const SizedBox(height: 24),
+              NeumorphicCard(
+                isInset: true,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: TextFormField(
+                  controller: _passwordController,
+                  decoration: InputDecoration(
+                    labelText: 'password'.tr(),
+                    border: InputBorder.none,
+                    prefixIcon: const Icon(Icons.lock),
+                  ),
+                  obscureText: true,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'password_required'.tr();
+                    }
+                    if (value.length < 6) {
+                      return 'password_too_short'.tr();
+                    }
+                    return null;
+                  },
                 ),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Password is required';
-                  }
-                  if (value.length < 6) {
-                    return 'Password must be at least 6 characters';
-                  }
-                  return null;
-                },
               ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: state.isLoading ? null : _handleSubmit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: state.isLoading
+              const SizedBox(height: 48),
+              NeumorphicButton(
+                onPressed: state.isLoading ? () {} : _handleSubmit,
+                child: Center(
+                  child: state.isLoading
                     ? const SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(
-                          color: Colors.white,
+                          color: AppColors.primary,
                           strokeWidth: 2,
                         ),
                       )
-                    : const Text('Create User'),
+                    : Text(
+                        'create_user'.tr().toUpperCase(),
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                ),
               ),
             ],
           ),

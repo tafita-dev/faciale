@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.core.security import create_access_token
 from app.db.mongodb import get_database
+from app.api import deps
 from app.api.deps import get_current_user
 import io
 
@@ -30,9 +31,11 @@ def mock_db():
 @pytest.fixture
 def mock_admin_user():
     user = {"email": "orgadmin@example.com", "role": "admin", "org_id": "org_a"}
-    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[deps.get_current_user] = lambda: user
+    app.dependency_overrides[deps.check_org_admin] = lambda: user
     yield user
-    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(deps.get_current_user, None)
+    app.dependency_overrides.pop(deps.check_org_admin, None)
 
 @pytest.mark.asyncio
 async def test_enroll_photo_upload_success(mock_db, mock_admin_user):
@@ -51,6 +54,9 @@ async def test_enroll_photo_upload_success(mock_db, mock_admin_user):
             headers={"Authorization": f"Bearer {token}"},
             files={"file": ("test.jpg", file, "image/jpeg")}
         )
+        
+        if response.status_code != 202:
+            print(f"DEBUG: status={response.status_code}, body={response.json()}")
         
         assert response.status_code == 202
         assert response.json()["message"] == "Enrollment started"

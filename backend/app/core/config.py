@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "70d63f0449d0689b6920f6667954950946b5a19003c20c025531952a265696d5"  # Generated for dev
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
-    ENCRYPTION_KEY: str | None = None
+    ENCRYPTION_KEY: str  = "9de0gjzz4XrMJx9zgwnLhmlQhjX22KFVy4sTz7oA1-4="
 
     # Recognition
     RECOGNITION_THRESHOLD: float = 0.85

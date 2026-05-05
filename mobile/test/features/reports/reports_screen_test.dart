@@ -46,7 +46,7 @@ void main() {
     );
 
     expect(find.text('Alice'), findsOneWidget);
-    expect(find.text('Present'), findsOneWidget);
+    expect(find.text('PRESENT'), findsOneWidget);
   });
 
   testWidgets('ReportsScreen shows empty state', (tester) async {
@@ -59,6 +59,6 @@ void main() {
       ),
     );
 
-    expect(find.text('No attendance logs found.'), findsOneWidget);
+    expect(find.text('no_attendance_logs'), findsOneWidget);
   });
 }

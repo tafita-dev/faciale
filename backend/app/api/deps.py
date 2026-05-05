@@ -1,3 +1,4 @@
+from typing import Any
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
@@ -109,6 +110,7 @@ async def check_only_user(current_user: dict = Depends(get_current_user)) -> dic
 
 def get_attendance_service(
     recognition_service: RecognitionService = Depends(get_recognition_service),
-    attendance_repo: AttendanceRepository = Depends(get_attendance_repository)
+    attendance_repo: AttendanceRepository = Depends(get_attendance_repository),
+    org_repo: OrgRepository = Depends(get_org_repository)
 ) -> AttendanceService:
-    return AttendanceService(recognition_service, attendance_repo)
+    return AttendanceService(recognition_service, attendance_repo, org_repo)

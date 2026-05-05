@@ -1,14 +1,19 @@
 from typing import Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Request, Response
 from app.api import deps
 from app.db.mongodb import get_database
 from app.models.employee import Employee, EmployeeCreate, EmployeePublic
 from app.services import enrollment
+from app.services.storage import StorageService
 from app.core.config import settings
 import uuid
 from datetime import datetime, timezone
 
 router = APIRouter()
+
+def get_photo_url(request: Request, employee_id: str) -> str:
+    base_url = str(request.base_url).rstrip('/')
+    return f"{base_url}{settings.API_V1_STR}/employees/{employee_id}/photo"
 
 @router.post("/", response_model=Employee, status_code=status.HTTP_201_CREATED, response_model_by_alias=True)
 async def create_employee(
@@ -51,6 +56,7 @@ async def create_employee(
 @router.get("/", response_model=List[Employee], response_model_by_alias=True)
 async def list_employees(
     *,
+    request: Request,
     db: Any = Depends(get_database),
     dept_id: Optional[str] = Query(None),
     current_user: dict = Depends(deps.check_org_user)
@@ -72,11 +78,17 @@ async def list_employees(
         
     cursor = db["employees"].find(query)
     employees = await cursor.to_list(length=100)
+    
+    for emp in employees:
+        if emp.get("is_enrolled"):
+            emp["photo_url"] = get_photo_url(request, emp["_id"])
+            
     return employees
 
 @router.get("/directory", response_model=List[EmployeePublic], response_model_by_alias=True)
 async def list_employee_directory(
     *,
+    request: Request,
     db: Any = Depends(get_database),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -96,7 +108,42 @@ async def list_employee_directory(
     
     cursor = db["employees"].find(query).skip(skip).limit(limit)
     employees = await cursor.to_list(length=limit)
+    
+    for emp in employees:
+        if emp.get("is_enrolled"):
+            emp["photo_url"] = get_photo_url(request, emp["_id"])
+            
     return employees
+
+@router.get("/{employee_id}/photo")
+async def get_employee_photo(
+    *,
+    db: Any = Depends(get_database),
+    employee_id: str,
+    current_user: dict = Depends(deps.check_org_user)
+) -> Any:
+    """
+    Get decrypted reference photo of an employee.
+    Restricted to organization users.
+    """
+    org_id = current_user.get("org_id")
+    
+    employee = await db["employees"].find_one({"_id": employee_id, "org_id": org_id})
+    if not employee or not employee.get("image_path"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Photo not found",
+        )
+    
+    storage_service = StorageService()
+    try:
+        photo_bytes = await storage_service.get_enrollment_photo(employee["image_path"])
+        return Response(content=photo_bytes, media_type="image/jpeg")
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving photo: {str(e)}",
+        )
 
 @router.post("/{employee_id}/enroll", status_code=status.HTTP_202_ACCEPTED)
 async def enroll_employee(
@@ -128,7 +175,7 @@ async def enroll_employee(
         )
     
     # 2. Validate file type
-    if file.content_type not in ["image/jpeg", "image/png"]:
+    if file.content_type not in ["image/jpeg", "image/png","image/jpg"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid file type. Only JPEG and PNG are allowed.",

@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../auth/auth_provider.dart';
+import 'package:http_parser/http_parser.dart'; 
 
 class AttendanceRepository {
   final http.Client _client;
@@ -24,7 +25,17 @@ class AttendanceRepository {
     final request = http.MultipartRequest('POST', url);
     
     request.headers['Authorization'] = 'Bearer $token';
-    request.files.add(await http.MultipartFile.fromPath('file', imagePath));
+          final extension = imagePath.split('.').last.toLowerCase();
+final type = (extension == 'png') ? 'png' : 'jpeg';
+
+request.files.add(
+  await http.MultipartFile.fromPath(
+    'file', 
+    imagePath,
+    contentType: MediaType('image', type),
+  ),
+
+);
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);

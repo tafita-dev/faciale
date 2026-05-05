@@ -40,6 +40,9 @@ class MockAuthNotifier extends Notifier<AuthState> implements AuthNotifier {
   Future<void> requestPasswordReset(String email) async {}
 
   @override
+  Future<void> fetchProfile() async {}
+
+  @override
   void resetStatus() {}
 }
 

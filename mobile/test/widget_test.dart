@@ -34,11 +34,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // Verify Dashboard is the screen
-    expect(find.text('Dashboard'), findsAtLeast(1));
+    // Verify Dashboard is the screen (expect keys because assets not loaded in test)
+    expect(find.text('dashboard'), findsAtLeast(1));
 
     // Verify Theme: Primary color should be Deep Blue (#0047AB)
-    final BuildContext dashboardContext = tester.element(find.text('Dashboard').first);
+    final BuildContext dashboardContext = tester.element(find.text('dashboard').first);
     final ThemeData theme = Theme.of(dashboardContext);
     expect(theme.colorScheme.primary, const Color(0xFF0047AB));
     expect(theme.colorScheme.surface, const Color(0xFFFFFFFF));
@@ -47,10 +47,10 @@ void main() {
     expect(find.byType(BottomNavigationBar), findsOneWidget);
 
     // Verify Navigation Bar items
-    expect(find.text('Dashboard'), findsAtLeast(1));
-    expect(find.text('Employees'), findsOneWidget);
-    expect(find.text('Reports'), findsOneWidget);
-    expect(find.text('Profile'), findsOneWidget);
+    expect(find.text('dashboard'), findsAtLeast(1));
+    expect(find.text('directory'), findsOneWidget); // Default for 'user' role
+    expect(find.text('reports'), findsOneWidget);
+    expect(find.text('profile'), findsOneWidget);
   });
 
   testWidgets('Scanner screen hides navigation bar', (WidgetTester tester) async {
@@ -81,14 +81,14 @@ void main() {
     expect(find.byType(BottomNavigationBar), findsOneWidget);
 
     // Navigate to /scanner
-    final BuildContext dashboardContext = tester.element(find.text('Dashboard').first);
+    final BuildContext dashboardContext = tester.element(find.text('dashboard').first);
     GoRouter.of(dashboardContext).go('/scanner');
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
     // Verify ScannerScreen is displayed
     expect(find.byType(ScannerScreen), findsOneWidget);
-    expect(find.text('Align your face'), findsOneWidget);
+    expect(find.text('ALIGN_YOUR_FACE'), findsOneWidget);
 
     // Verify Bottom Navigation Bar is HIDDEN
     expect(find.byType(BottomNavigationBar), findsNothing);

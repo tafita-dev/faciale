@@ -10,9 +10,38 @@ from app.core.config import settings
 from app.db.mongodb import get_database
 from app.models.token import Token
 from app.models.auth import PasswordResetRequest, PasswordResetConfirm
+from app.repositories.user import UserRepository
 from app.api import deps
+from pydantic import BaseModel
 
 router = APIRouter()
+
+class FCMTokenUpdate(BaseModel):
+    token: str
+
+@router.post("/fcm-token")
+async def update_fcm_token(
+    data: FCMTokenUpdate,
+    current_user: dict = Depends(deps.get_current_user)
+) -> Any:
+    """
+    Update the FCM token for the current user.
+    """
+    user_repo = UserRepository()
+    await user_repo.add_fcm_token(current_user["email"], data.token)
+    return {"success": True}
+
+@router.delete("/fcm-token")
+async def remove_fcm_token(
+    data: FCMTokenUpdate,
+    current_user: dict = Depends(deps.get_current_user)
+) -> Any:
+    """
+    Remove an FCM token for the current user.
+    """
+    user_repo = UserRepository()
+    await user_repo.remove_fcm_token(current_user["email"], data.token)
+    return {"success": True}
 
 # =========================
 # LOGGER CONFIG
@@ -110,6 +139,7 @@ async def read_users_me(
         "name": current_user.get("name"),
         "role": current_user.get("role"),
         "org_id": current_user.get("org_id"),
+        "photo_url": current_user.get("photo_url"),
     }
 
 

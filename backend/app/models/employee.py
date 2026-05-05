@@ -22,6 +22,7 @@ class EmployeeInDB(EmployeeBase):
     is_active: bool = True
     is_enrolled: bool = False
     image_path: Optional[str] = None
+    photo_url: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     model_config = ConfigDict(
@@ -33,6 +34,7 @@ class Employee(EmployeeInDB):
 
 class EmployeePublic(EmployeeBase):
     id: str = Field(alias="_id")
+    photo_url: Optional[str] = None
 
     model_config = ConfigDict(
         populate_by_name=True,

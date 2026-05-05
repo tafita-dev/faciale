@@ -7,6 +7,8 @@ import uuid
 class AttendanceStatus(str, Enum):
     success = "success"
     failed = "failed"
+    present = "present"
+    late = "late"
 
 class AttendanceReason(str, Enum):
     no_match = "no_match"

@@ -1,3 +1,27 @@
+class OrgSettings {
+  final String startTime;
+  final int lateBufferMinutes;
+
+  OrgSettings({
+    required this.startTime,
+    required this.lateBufferMinutes,
+  });
+
+  factory OrgSettings.fromJson(Map<String, dynamic> json) {
+    return OrgSettings(
+      startTime: json['start_time'] as String? ?? "09:00",
+      lateBufferMinutes: json['late_buffer_minutes'] as int? ?? 15,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'start_time': startTime,
+      'late_buffer_minutes': lateBufferMinutes,
+    };
+  }
+}
+
 class Org {
   final String id;
   final String name;
@@ -5,6 +29,7 @@ class Org {
   final String? logoUrl;
   final double? recognitionThreshold;
   final DateTime createdAt;
+  final OrgSettings? settings;
 
   Org({
     required this.id,
@@ -13,6 +38,7 @@ class Org {
     this.logoUrl,
     this.recognitionThreshold,
     required this.createdAt,
+    this.settings,
   });
 
   factory Org.fromJson(Map<String, dynamic> json) {
@@ -23,6 +49,9 @@ class Org {
       logoUrl: json['logo_url'] as String?,
       recognitionThreshold: (json['recognition_threshold'] as num?)?.toDouble(),
       createdAt: DateTime.parse(json['created_at'] as String),
+      settings: json['settings'] != null 
+          ? OrgSettings.fromJson(json['settings'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -34,6 +63,7 @@ class Org {
       'logo_url': logoUrl,
       'recognition_threshold': recognitionThreshold,
       'created_at': createdAt.toIso8601String(),
+      if (settings != null) 'settings': settings!.toJson(),
     };
   }
 }

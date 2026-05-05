@@ -65,7 +65,7 @@ def test_extract_embedding_multiple_faces(recognition_service):
         service.extract_embedding(fake_img)
 
 @pytest.mark.asyncio
-async def test_verify_liveness_success(recognition_service):
+async def test_process_recognition_success(recognition_service):
     service, mock_app_instance, mock_liveness_instance = recognition_service
     
     # Fake image bytes
@@ -74,22 +74,29 @@ async def test_verify_liveness_success(recognition_service):
     # Mock decode_image_from_bytes to return a fake numpy array
     fake_img = np.zeros((100, 100, 3), dtype=np.uint8)
     
-    # Mock face with bbox
+    # Mock face with bbox and embedding
     mock_face = MagicMock()
     mock_face.bbox = np.array([10, 10, 50, 50])
+    mock_face.embedding = np.random.rand(512).astype(np.float32)
     mock_app_instance.get.return_value = [mock_face]
     
     mock_liveness_instance.is_live.return_value = {"is_live": True, "score": 0.95}
     
+    # Mock matching
+    mock_repo = MagicMock()
+    mock_repo.search_embedding = AsyncMock(return_value={"employee_id": "emp123", "score": 0.92})
+    service.vector_repo = mock_repo
+    
     with patch.object(service, "decode_image_from_bytes", return_value=fake_img):
-        result = await service.verify_liveness(fake_img_bytes)
+        result = await service.process_recognition("org_a", fake_img_bytes)
         
         assert result["is_live"] is True
-        assert result["score"] == 0.95
+        assert result["match"] is True
+        assert result["employee_id"] == "emp123"
         mock_liveness_instance.is_live.assert_called_once_with(fake_img, [10.0, 10.0, 50.0, 50.0])
 
 @pytest.mark.asyncio
-async def test_verify_liveness_spoof(recognition_service):
+async def test_process_recognition_spoof(recognition_service):
     service, mock_app_instance, mock_liveness_instance = recognition_service
     fake_img_bytes = b"spoof_image_data"
     fake_img = np.zeros((100, 100, 3), dtype=np.uint8)
@@ -102,11 +109,11 @@ async def test_verify_liveness_spoof(recognition_service):
     mock_liveness_instance.is_live.return_value = {"is_live": False, "score": 0.2}
     
     with patch.object(service, "decode_image_from_bytes", return_value=fake_img):
-        result = await service.verify_liveness(fake_img_bytes)
+        result = await service.process_recognition("org_a", fake_img_bytes)
         
         assert result["is_live"] is False
+        assert result["match"] is False
         assert result["score"] == 0.2
-        mock_liveness_instance.is_live.assert_called_once_with(fake_img, [10.0, 10.0, 50.0, 50.0])
 
 @pytest.mark.asyncio
 async def test_match_face_success(recognition_service):

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../auth/auth_provider.dart';
 
 class NavigationShell extends ConsumerWidget {
@@ -19,33 +20,33 @@ class NavigationShell extends ConsumerWidget {
     final isAdmin = role == 'admin';
 
     final items = [
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.dashboard_outlined),
-        activeIcon: Icon(Icons.dashboard),
-        label: 'Dashboard',
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.dashboard_outlined),
+        activeIcon: const Icon(Icons.dashboard),
+        label: 'dashboard'.tr(),
       ),
       if (isAdmin)
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.people_outline),
-          activeIcon: Icon(Icons.people),
-          label: 'Employees',
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.people_outline),
+          activeIcon: const Icon(Icons.people),
+          label: 'employees'.tr(),
         )
       else if (!isSuperAdmin)
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.contact_page_outlined),
-          activeIcon: Icon(Icons.contact_page),
-          label: 'Directory',
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.contact_page_outlined),
+          activeIcon: const Icon(Icons.contact_page),
+          label: 'directory'.tr(),
         ),
       if (!isSuperAdmin)
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.assessment_outlined),
-          activeIcon: Icon(Icons.assessment),
-          label: 'Reports',
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.assessment_outlined),
+          activeIcon: const Icon(Icons.assessment),
+          label: 'reports'.tr(),
         ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.person_outline),
-        activeIcon: Icon(Icons.person),
-        label: 'Profile',
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.person_outline),
+        activeIcon: const Icon(Icons.person),
+        label: 'profile'.tr(),
       ),
     ];
 

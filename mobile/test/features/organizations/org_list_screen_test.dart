@@ -31,6 +31,9 @@ class MockAuthNotifier extends Notifier<AuthState> implements AuthNotifier {
   Future<void> requestPasswordReset(String email) async {}
 
   @override
+  Future<void> fetchProfile() async {}
+
+  @override
   void resetStatus() {}
 }
 
@@ -79,7 +82,7 @@ void main() {
     await tester.pumpWidget(createWidgetUnderTest());
     await tester.pumpAndSettle();
 
-    expect(find.text('No organizations found'), findsOneWidget);
+    expect(find.text('no_organizations_found'), findsOneWidget);
   });
 
   testWidgets('shows delete confirmation dialog and deletes on confirm', (WidgetTester tester) async {
@@ -96,8 +99,8 @@ void main() {
     await tester.tap(find.byIcon(Icons.delete));
     await tester.pumpAndSettle();
 
-    expect(find.text('Delete Organization'), findsOneWidget);
-    expect(find.text('Are you sure you want to delete "Org 1"?'), findsOneWidget);
+    expect(find.text('delete_organization'), findsOneWidget);
+    expect(find.text('delete_organization_confirm'), findsOneWidget);
 
     when(mockClient.delete(any, headers: anyNamed('headers')))
         .thenAnswer((_) async => http.Response('', 204));
@@ -106,11 +109,11 @@ void main() {
     when(mockClient.get(any, headers: anyNamed('headers')))
         .thenAnswer((_) async => http.Response('[]', 200));
 
-    await tester.tap(find.text('Delete'));
+    await tester.tap(find.text('delete'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Organization deleted successfully'), findsOneWidget);
-    expect(find.text('No organizations found'), findsOneWidget);
+    expect(find.text('organization_deleted_successfully'), findsOneWidget);
+    expect(find.text('no_organizations_found'), findsOneWidget);
   });
 
   testWidgets('shows edit dialog and updates on save', (WidgetTester tester) async {
@@ -127,16 +130,16 @@ void main() {
     await tester.tap(find.byIcon(Icons.edit));
     await tester.pumpAndSettle();
 
-    expect(find.text('Edit Organization'), findsOneWidget);
-    expect(find.widgetWithText(TextField, 'Name'), findsOneWidget);
+    expect(find.text('edit_organization'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'organization_name'), findsOneWidget);
 
     // Enter new name
-    await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Org 1 Updated');
+    await tester.enterText(find.widgetWithText(TextField, 'organization_name'), 'Org 1 Updated');
     
     // Select Company type
-    await tester.tap(find.text('School'));
+    await tester.tap(find.text('school'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Company').last);
+    await tester.tap(find.text('company').last);
     await tester.pumpAndSettle();
 
     when(mockClient.patch(any, headers: anyNamed('headers'), body: anyNamed('body')))
@@ -153,10 +156,10 @@ void main() {
           {'_id': '1', 'name': 'Org 1 Updated', 'type': 'company', 'created_at': DateTime.now().toIso8601String()},
         ]), 200));
 
-    await tester.tap(find.text('Save'));
+    await tester.tap(find.text('save'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Organization updated successfully'), findsOneWidget);
+    expect(find.text('organization_updated_successfully'), findsOneWidget);
     expect(find.text('Org 1 Updated'), findsOneWidget);
     expect(find.text('COMPANY'), findsOneWidget);
   });

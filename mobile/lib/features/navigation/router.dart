@@ -6,6 +6,7 @@ import '../employees/employees_screen.dart';
 import '../employees/directory_screen.dart';
 import '../reports/reports_screen.dart';
 import '../profile/profile_screen.dart';
+import '../settings/settings_screen.dart';
 import '../attendance/scanner_screen.dart';
 import '../auth/login_screen.dart';
 import '../auth/forgot_password_screen.dart';
@@ -14,6 +15,7 @@ import '../employees/enroll_screen.dart';
 import '../organizations/create_org_screen.dart';
 import '../organizations/org_list_screen.dart';
 import '../organizations/department_management_screen.dart';
+import '../organizations/org_settings_screen.dart';
 import 'navigation_shell.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -52,9 +54,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const DepartmentManagementScreen(),
       ),
       GoRoute(
+        path: '/admin/org/settings',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const OrgSettingsScreen(),
+      ),
+      GoRoute(
         path: '/admin/user/create',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const CreateUserScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SettingsScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {

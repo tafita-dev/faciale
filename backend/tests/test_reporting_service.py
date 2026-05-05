@@ -7,13 +7,17 @@ from datetime import datetime, time, timezone
 async def test_get_today_stats():
     mock_attendance_repo = AsyncMock()
     mock_employee_repo = AsyncMock()
+    mock_org_repo = AsyncMock()
     
     service = ReportingService(
         attendance_repo=mock_attendance_repo,
         employee_repo=mock_employee_repo,
-        org_repo=AsyncMock()
+        org_repo=mock_org_repo
     )
     
+    mock_org_repo.get_org.return_value = MagicMock(
+        settings=MagicMock(start_time="09:00", late_buffer_minutes=15)
+    )
     mock_employee_repo.count_employees.return_value = 20
     mock_attendance_repo.get_today_stats.return_value = {
         "present": 12,
@@ -26,8 +30,9 @@ async def test_get_today_stats():
     assert stats["present"] == 12
     assert stats["late"] == 3
     assert stats["absent"] == 8
-    assert stats["total"] == 20
+    assert stats["total_employees"] == 20
     
+    mock_org_repo.get_org.assert_called_once_with(org_id)
     mock_employee_repo.count_employees.assert_called_once_with(org_id)
     # Check that get_today_stats was called with correct org_id
     args, _ = mock_attendance_repo.get_today_stats.call_args
@@ -65,6 +70,9 @@ async def test_get_system_stats():
     mock_employee_repo = AsyncMock()
     mock_org_repo = AsyncMock()
     
+    # Mock DB for count_documents
+    mock_org_repo.collection.database.__getitem__.return_value.count_documents = AsyncMock(return_value=10)
+    
     service = ReportingService(
         attendance_repo=mock_attendance_repo,
         employee_repo=mock_employee_repo,
@@ -72,27 +80,30 @@ async def test_get_system_stats():
     )
     
     mock_org_repo.count_all.return_value = 5
-    mock_employee_repo.count_all.return_value = 100
+    mock_employee_repo.collection.count_documents.return_value = 100
     
     stats = await service.get_system_stats()
     
     assert stats["total_organizations"] == 5
-    assert stats["total_users"] == 100
+    assert stats["total_employees"] == 100
     
     mock_org_repo.count_all.assert_called_once()
-    mock_employee_repo.count_all.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_get_today_stats_no_data():
     mock_attendance_repo = AsyncMock()
     mock_employee_repo = AsyncMock()
+    mock_org_repo = AsyncMock()
     
     service = ReportingService(
         attendance_repo=mock_attendance_repo,
         employee_repo=mock_employee_repo,
-        org_repo=AsyncMock()
+        org_repo=mock_org_repo
     )
     
+    mock_org_repo.get_org.return_value = MagicMock(
+        settings=MagicMock(start_time="09:00", late_buffer_minutes=15)
+    )
     mock_employee_repo.count_employees.return_value = 0
     mock_attendance_repo.get_today_stats.return_value = {
         "present": 0,
@@ -104,7 +115,7 @@ async def test_get_today_stats_no_data():
     assert stats["present"] == 0
     assert stats["late"] == 0
     assert stats["absent"] == 0
-    assert stats["total"] == 0
+    assert stats["total_employees"] == 0
 
 @pytest.mark.asyncio
 async def test_export_logs_pdf():
@@ -119,11 +130,13 @@ async def test_export_logs_pdf():
     # Mock org
     mock_org = MagicMock()
     mock_org.name = "Test Organization"
+    # Ensure settings is not used here or properly mocked
+    mock_org.settings = None 
     mock_org_repo.get_org.return_value = mock_org
     
     # Mock cursor
     mock_cursor = AsyncMock()
-    mock_cursor.__aiter__.return_value = [
+    mock_cursor.__aiter__.return_value = iter([
         {
             "timestamp": datetime(2023, 1, 1, 9, 0, tzinfo=timezone.utc),
             "employee_name": "John Doe",
@@ -131,7 +144,7 @@ async def test_export_logs_pdf():
             "status": "success",
             "confidence": 0.95
         }
-    ]
+    ])
     mock_attendance_repo.get_logs_cursor.return_value = mock_cursor
     
     generator = await service.export_logs(org_id="org1", format="pdf")

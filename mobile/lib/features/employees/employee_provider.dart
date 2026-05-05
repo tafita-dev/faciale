@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../auth/auth_provider.dart';
+import 'package:http_parser/http_parser.dart'; // Ajoute ceci
 
 class EmployeeState {
   final bool isLoading;
@@ -38,12 +39,14 @@ class Employee {
   final String name;
   final String deptId;
   final bool isEnrolled;
+  final String? photoUrl;
 
   Employee({
     required this.id,
     required this.name,
     required this.deptId,
     required this.isEnrolled,
+    this.photoUrl,
   });
 
   factory Employee.fromJson(Map<String, dynamic> json) {
@@ -52,6 +55,7 @@ class Employee {
       name: json['name'] as String,
       deptId: json['dept_id'] as String,
       isEnrolled: json['is_enrolled'] as bool? ?? false,
+      photoUrl: json['photo_url'] as String?,
     );
   }
 }
@@ -184,7 +188,17 @@ class EmployeeNotifier extends Notifier<EmployeeState> {
           Uri.parse('$_baseUrl/employees/$employeeId/enroll'),
         );
         request.headers['Authorization'] = 'Bearer ${authState.token}';
-        request.files.add(await http.MultipartFile.fromPath('file', imagePath));
+      final extension = imagePath.split('.').last.toLowerCase();
+final type = (extension == 'png') ? 'png' : 'jpeg';
+
+request.files.add(
+  await http.MultipartFile.fromPath(
+    'file', 
+    imagePath,
+    contentType: MediaType('image', type),
+  ),
+
+);
 
         final enrollResponse = await request.send();
 

@@ -131,3 +131,27 @@ async def test_get_enrollment_photo_not_found(tmp_path):
     with pytest.raises(StorageServiceError, match="File not found"):
         await storage_service.get_enrollment_photo("/non/existent/path.jpg")
 
+@pytest.mark.asyncio
+async def test_save_logo_success(tmp_path):
+    storage_service = StorageService(upload_dir=str(tmp_path))
+    
+    file_content = b"logo content"
+    filename = "logo.png"
+    
+    mock_file = MagicMock()
+    mock_file.read = AsyncMock(return_value=file_content)
+    mock_file.filename = filename
+    
+    saved_filename = await storage_service.save_logo(mock_file)
+    
+    # Check if file exists
+    path = tmp_path / saved_filename
+    assert path.exists()
+    
+    # Content should be original (not encrypted)
+    saved_content = path.read_bytes()
+    assert saved_content == file_content
+    
+    # Check if filename contains 'logo_' prefix
+    assert saved_filename.startswith("logo_")
+

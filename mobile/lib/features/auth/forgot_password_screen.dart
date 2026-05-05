@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/theme.dart';
 import 'auth_provider.dart';
 
@@ -36,8 +37,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         _isRequestSent = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password reset token generated. Check logs or response.'),
+        SnackBar(
+          content: Text('reset_token_generated'.tr()),
           backgroundColor: AppColors.success,
         ),
       );
@@ -62,8 +63,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     final state = ref.read(authProvider);
     if (state.isSuccess) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password reset successfully. You can now login.'),
+        SnackBar(
+          content: Text('reset_success'.tr()),
           backgroundColor: AppColors.success,
         ),
       );
@@ -85,7 +86,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Reset Password'),
+        title: Text('reset_password'.tr()),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: AppColors.text,
@@ -96,17 +97,17 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (!_isRequestSent) ...[
-              const Text(
-                'Enter your email to receive a password reset token.',
-                style: TextStyle(fontSize: 16),
+              Text(
+                'enter_email_reset'.tr(),
+                style: const TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 24),
               TextField(
                 controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                  focusedBorder: OutlineInputBorder(
+                decoration: InputDecoration(
+                  labelText: 'email'.tr(),
+                  border: const OutlineInputBorder(),
+                  focusedBorder: const OutlineInputBorder(
                     borderSide: BorderSide(color: AppColors.primary, width: 2.0),
                   ),
                 ),
@@ -129,20 +130,20 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                           strokeWidth: 2,
                         ),
                       )
-                    : const Text('Request Reset Token'),
+                    : Text('request_reset_token'.tr()),
               ),
             ] else ...[
-              const Text(
-                'Enter the token and your new password.',
-                style: TextStyle(fontSize: 16),
+              Text(
+                'enter_token_reset'.tr(),
+                style: const TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 24),
               TextField(
                 controller: _tokenController,
-                decoration: const InputDecoration(
-                  labelText: 'Token',
-                  border: OutlineInputBorder(),
-                  focusedBorder: OutlineInputBorder(
+                decoration: InputDecoration(
+                  labelText: 'token'.tr(),
+                  border: const OutlineInputBorder(),
+                  focusedBorder: const OutlineInputBorder(
                     borderSide: BorderSide(color: AppColors.primary, width: 2.0),
                   ),
                 ),
@@ -151,10 +152,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               TextField(
                 controller: _passwordController,
                 obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'New Password',
-                  border: OutlineInputBorder(),
-                  focusedBorder: OutlineInputBorder(
+                decoration: InputDecoration(
+                  labelText: 'new_password'.tr(),
+                  border: const OutlineInputBorder(),
+                  focusedBorder: const OutlineInputBorder(
                     borderSide: BorderSide(color: AppColors.primary, width: 2.0),
                   ),
                 ),
@@ -176,7 +177,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                           strokeWidth: 2,
                         ),
                       )
-                    : const Text('Reset Password'),
+                    : Text('reset_password'.tr()),
               ),
               const SizedBox(height: 16),
               TextButton(
@@ -185,7 +186,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     _isRequestSent = false;
                   });
                 },
-                child: const Text('Back to request'),
+                child: Text('back_to_request'.tr()),
               ),
             ],
           ],

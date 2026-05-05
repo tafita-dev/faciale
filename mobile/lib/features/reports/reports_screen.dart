@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../auth/auth_provider.dart';
 import 'reports_provider.dart';
+import '../../core/theme.dart';
+import '../../core/widgets/neumorphic_card.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -33,13 +36,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     });
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Reports'),
+            Text('reports'.tr()),
             Text(
-              isAdmin ? 'Organization-wide' : 'My Recordings Only',
+              isAdmin ? 'organization_wide'.tr() : 'my_recordings_only'.tr(),
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
             ),
           ],
@@ -51,13 +55,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               child: SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
               ),
             )
           else
             IconButton(
               icon: const Icon(Icons.download),
-              tooltip: 'Export CSV',
+              tooltip: 'export_csv'.tr(),
               onPressed: () => ref.read(reportsProvider.notifier).exportLogs(),
             ),
           if (isAdmin)
@@ -90,7 +94,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => ref.read(reportsProvider.notifier).fetchLogs(),
-              child: const Text('Retry'),
+              child: Text('retry'.tr()),
             ),
           ],
         ),
@@ -99,48 +103,66 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     if (state.logs.isEmpty) {
       return ListView(
-        children: const [
-          SizedBox(height: 100),
-          Center(child: Text('No attendance logs found.')),
+        children: [
+          const SizedBox(height: 100),
+          Center(child: Text('no_attendance_logs'.tr())),
         ],
       );
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.all(24),
       itemCount: state.logs.length,
       itemBuilder: (context, index) {
         final log = state.logs[index];
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: _getStatusColor(log.status).withOpacity(0.1),
-            child: Icon(
-              _getStatusIcon(log.status),
-              color: _getStatusColor(log.status),
-            ),
-          ),
-          title: Text(
-            log.employeeName,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Text(_formatTimestamp(log.timestamp)),
-          trailing: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: _getStatusColor(log.status).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              log.status,
-              style: TextStyle(
-                color: _getStatusColor(log.status),
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: NeumorphicCard(
+            padding: const EdgeInsets.all(8),
+            child: ListTile(
+              leading: NeumorphicCard(
+                padding: const EdgeInsets.all(8),
+                borderRadius: 12,
+                child: Icon(
+                  _getStatusIcon(log.status),
+                  color: _getStatusColor(log.status),
+                ),
+              ),
+              title: Text(
+                log.employeeName,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(_formatTimestamp(log.timestamp), style: const TextStyle(fontSize: 12)),
+              trailing: NeumorphicCard(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                borderRadius: 12,
+                child: Text(
+                  _getLocalizedStatus(log.status).toUpperCase(),
+                  style: TextStyle(
+                    color: _getStatusColor(log.status),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ),
         );
       },
     );
+  }
+
+  String _getLocalizedStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'present':
+        return 'present'.tr();
+      case 'late':
+        return 'late'.tr();
+      case 'absent':
+        return 'absent'.tr();
+      default:
+        return status;
+    }
   }
 
   Color _getStatusColor(String status) {

@@ -66,6 +66,34 @@ class StorageService:
 
         return str(file_path.absolute())
 
+    async def save_logo(self, file: UploadFile) -> str:
+        """
+        Saves an organization logo.
+        Returns the filename of the saved file.
+        """
+        if not self.upload_dir.exists():
+            try:
+                self.upload_dir.mkdir(parents=True, mode=0o755)
+            except OSError as e:
+                raise StorageServiceError(f"Failed to create directory {self.upload_dir}: {e}") from e
+
+        # Generate unique filename
+        file_extension = pathlib.Path(file.filename).suffix or ".jpg"
+        unique_filename = f"logo_{uuid.uuid4()}{file_extension}"
+        file_path = self.upload_dir / unique_filename
+
+        try:
+            contents = await file.read()
+            if not contents:
+                raise InvalidImageError("Uploaded file is empty.")
+            
+            async with aiofiles.open(file_path, mode='wb') as f:
+                await f.write(contents)
+        except Exception as e:
+            raise StorageServiceError(f"An unexpected error occurred while saving the logo: {e}") from e
+
+        return unique_filename
+
     async def get_enrollment_photo(self, file_path: str) -> bytes:
         """
         Retrieves and decrypts an enrollment photo.
