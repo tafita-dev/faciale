@@ -25,6 +25,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     });
   }
 
+  void _showLogoutConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.background,
+        title: Text('logout'.tr()),
+        content: Text('logout_confirm'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await ref.read(authProvider.notifier).logout();
+              if (mounted) {
+                context.go('/login');
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text('logout'.tr()),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
@@ -119,12 +147,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             icon: Icons.logout,
             title: 'logout'.tr(),
             color: AppColors.error,
-            onTap: () async {
-              await ref.read(authProvider.notifier).logout();
-              if (mounted) {
-                context.go('/login');
-              }
-            },
+            onTap: _showLogoutConfirmation,
           ),
           const SizedBox(height: 48),
           const Center(child: Logo(size: 20)),

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:faciale/features/auth/auth_provider.dart';
+import 'package:faciale/features/auth/auth_state.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mockito/annotations.dart';
@@ -137,5 +138,34 @@ void main() {
     expect(state.isLoading, false);
     expect(state.isSuccess, true);
     expect(state.error, null);
+  });
+
+  test('logout clears storage and resets state', () async {
+    // Setup state via login
+    const dummyToken = "header.eyJzdWIiOiAidGVzdEB0ZXN0LmNvbSIsICJyb2xlIjogInN1cGVyYWRtaW4iLCAib3JnX2lkIjogIm9yZzEyMyJ9.signature";
+    when(mockClient.post(any, body: anyNamed('body')))
+        .thenAnswer((_) async => http.Response(
+              jsonEncode({'access_token': dummyToken}),
+              200,
+            ));
+    when(mockClient.get(any, headers: anyNamed('headers')))
+        .thenAnswer((_) async => http.Response(
+              jsonEncode({'email': 'test@test.com', 'name': 'Test'}),
+              200,
+            ));
+
+    await container.read(authProvider.notifier).login('test@test.com', 'password');
+    expect(container.read(authProvider).token, dummyToken);
+
+    await container.read(authProvider.notifier).logout();
+
+    final state = container.read(authProvider);
+    expect(state.token, null);
+    expect(state.role, null);
+    expect(state.name, null);
+
+    verify(mockStorage.delete(key: 'jwt_token')).called(1);
+    verify(mockStorage.delete(key: 'user_role')).called(1);
+    verify(mockStorage.delete(key: 'org_id')).called(1);
   });
 }
