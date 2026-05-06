@@ -10,7 +10,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/services/notification_service.dart';
+import 'core/ux/ux_provider.dart';
+import 'dart:ui';
+
 import 'features/auth/auth_provider.dart';
+import 'features/auth/auth_state.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -60,9 +64,32 @@ class FacialeApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final connectivity = ref.watch(connectivityProvider);
+    final ux = ref.watch(uxProvider);
+
+    // Listen for UX messages to show snackbars
+    ref.listen<UXMessage?>(uxProvider.select((s) => s.message), (previous, next) {
+      if (next != null && next != previous) {
+        final context = rootNavigatorKey.currentContext;
+        if (context != null) {
+          final color = next.type == UXMessageType.error
+              ? Colors.red
+              : (next.type == UXMessageType.success ? Colors.green : AppColors.primary);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(next.text.tr()),
+              backgroundColor: color,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+          ref.read(uxProvider.notifier).clearMessage();
+        }
+      }
+    });
 
     // Initialize notification service when token is available
-    ref.listen(authProvider, (previous, next) {
+    ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.token != null && previous?.token == null) {
         ref.read(notificationServiceProvider).initialize();
       }
@@ -77,42 +104,67 @@ class FacialeApp extends ConsumerWidget {
       locale: _safeLocale(context),
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
-       return Stack(
-  children: [
-    child!,
-    connectivity.when(
-      data: (status) => status == ConnectivityStatus.isDisconnected
-          ? Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Material(
-                child: Container(
-                  color: Colors.red,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  // Suppression du const ici car l'enfant (Text) est dynamique
-                  child: SafeArea(
-                    bottom: false,
-                    child: Center(
-                      child: Text(
-                        'no_internet'.tr(),
-                        // Suppression du const ici aussi
-                        style: const TextStyle(
-                          color: Colors.white, 
-                          fontWeight: FontWeight.bold,
+        return Stack(
+          children: [
+            child!,
+            connectivity.when(
+              data: (status) => status == ConnectivityStatus.isDisconnected
+                  ? Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: Material(
+                        child: Container(
+                          color: Colors.red,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: SafeArea(
+                            bottom: false,
+                            child: Center(
+                              child: Text(
+                                'no_internet'.tr(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              loading: () => const SizedBox.shrink(),
+            ),
+            if (ux.isLoading)
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: Container(
+                    color: Colors.black.withOpacity(0.3),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(color: Colors.white),
+                          if (ux.loadingMessage != null) ...[
+                            const SizedBox(height: 16),
+                            Text(
+                              ux.loadingMessage!.tr(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ),
                 ),
               ),
-            )
-          : const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
-      loading: () => const SizedBox.shrink(),
-    ),
-  ],
-);
+          ],
+        );
       },
     );
   }

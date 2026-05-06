@@ -1,7 +1,7 @@
 ---
 id: US-12-BRAND-007-3
 title: Mobile - UX Optimization & Transitions
-status: READY
+status: DONE
 type: feature
 priority: MEDIUM
 ---

@@ -18,11 +18,11 @@ import '../organizations/department_management_screen.dart';
 import '../organizations/org_settings_screen.dart';
 import 'navigation_shell.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/login',
     routes: [
       GoRoute(
@@ -35,37 +35,37 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/enroll',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const EnrollScreen(),
       ),
       GoRoute(
         path: '/admin/org/create',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const CreateOrgScreen(),
       ),
       GoRoute(
         path: '/admin/orgs',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const OrgListScreen(),
       ),
       GoRoute(
         path: '/admin/departments',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const DepartmentManagementScreen(),
       ),
       GoRoute(
         path: '/admin/org/settings',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const OrgSettingsScreen(),
       ),
       GoRoute(
         path: '/admin/user/create',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const CreateUserScreen(),
       ),
       GoRoute(
         path: '/settings',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
       ),
       StatefulShellRoute.indexedStack(
@@ -117,7 +117,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/scanner',
-        parentNavigatorKey: _rootNavigatorKey, // Ensures it's full-screen
+        parentNavigatorKey: rootNavigatorKey, // Ensures it's full-screen
         builder: (context, state) => const ScannerScreen(),
       ),
     ],

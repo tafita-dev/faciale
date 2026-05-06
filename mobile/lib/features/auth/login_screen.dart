@@ -9,6 +9,7 @@ import '../../core/theme.dart';
 import '../../core/widgets/neumorphic_card.dart';
 import '../../core/widgets/neumorphic_button.dart';
 import '../../core/widgets/logo.dart';
+import '../../core/ux/ux_provider.dart';
 import 'auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -44,19 +45,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     final email = _emailController.text;
     final password = _passwordController.text;
 
+    final ux = ref.read(uxProvider.notifier);
+    ux.showLoading('authenticating');
+
     await ref.read(authProvider.notifier).login(email, password);
+    
+    ux.hideLoading();
     
     final authState = ref.read(authProvider);
 
     if (authState.error != null) {
       _shakeController.forward(from: 0.0);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authState.error!),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      ux.showError(authState.error!);
     } else if (authState.token != null) {
       if (!mounted) return;
       context.go('/dashboard');
@@ -65,23 +65,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authProvider);
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: ResponsiveLayout(
-        mobile: _buildLoginForm(context, authState),
+        mobile: _buildLoginForm(context),
         tablet: Center(
           child: SizedBox(
             width: 450,
-            child: _buildLoginForm(context, authState),
+            child: _buildLoginForm(context),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildLoginForm(BuildContext context, AuthState authState) {
+  Widget _buildLoginForm(BuildContext context) {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -133,26 +131,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
             SizedBox(
               width: double.infinity,
               child: NeumorphicButton(
-                onPressed: authState.isLoading ? () {} : _handleLogin,
+                onPressed: _handleLogin,
                 backgroundColor: AppColors.background,
                 child: Center(
-                  child: authState.isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: AppColors.primary,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(
-                          'login'.tr().toUpperCase(),
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
+                  child: Text(
+                    'login'.tr().toUpperCase(),
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
                 ),
               ),
             ),

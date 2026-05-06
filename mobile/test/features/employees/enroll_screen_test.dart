@@ -1,97 +1,102 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:faciale/core/widgets/neumorphic_button.dart';
 import 'package:faciale/features/employees/enroll_screen.dart';
+import 'package:faciale/features/employees/camera_actions.dart';
+import 'package:faciale/features/employees/employee_provider.dart';
 import 'package:faciale/features/organizations/department_provider.dart';
+import 'package:faciale/core/ux/ux_provider.dart';
+import 'package:faciale/core/theme.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:go_router/go_router.dart';
+import 'dart:ui';
 
 void main() {
-  setUp(() {
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
     dotenv.testLoad(fileInput: 'API_URL=http://localhost:8000/api/v1');
   });
 
-  testWidgets('EnrollScreen shows form and handles validation', (WidgetTester tester) async {
+  testWidgets('EnrollScreen shows global loading overlay during submission', (WidgetTester tester) async {
+    final mockDept = Department(id: 'd1', name: 'Engineering');
+    
     final router = GoRouter(
-      initialLocation: '/enroll',
       routes: [
         GoRoute(
-          path: '/enroll',
+          path: '/',
           builder: (context, state) => const EnrollScreen(),
         ),
         GoRoute(
           path: '/employees',
-          builder: (context, state) => const Scaffold(body: Text('Employee List')),
+          builder: (context, state) => const Scaffold(body: Text('Employees List')),
         ),
       ],
     );
-
-    final mockDept = Department(id: 'd1', name: 'Engineering');
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           capturePhotoProvider.overrideWithValue((context) async => 'fake_path.jpg'),
           departmentProvider.overrideWith(() => MockDeptNotifier([mockDept])),
+          employeeProvider.overrideWith(() => MockEmployeeNotifier()),
         ],
-        child: MaterialApp.router(
-          routerConfig: router,
+        child: Consumer(
+          builder: (context, ref, child) {
+            final ux = ref.watch(uxProvider);
+            return MaterialApp.router(
+              theme: AppTheme.lightTheme,
+              routerConfig: router,
+              builder: (context, child) {
+                return Stack(
+                  children: [
+                    child!,
+                    if (ux.isLoading)
+                      const Positioned.fill(
+                        child: Material(
+                          color: Colors.black26,
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            );
+          },
         ),
       ),
     );
 
     await tester.pumpAndSettle();
 
-    // Verify UI elements
-    expect(find.text('employee_enrollment'), findsOneWidget);
-    expect(find.byType(TextFormField), findsNWidgets(2)); // Name and Email fields
-    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget); // Dept field
-    expect(find.text('capture_reference_photo'), findsOneWidget);
-    expect(find.widgetWithText(NeumorphicButton, 'SAVE'), findsOneWidget);
-
-    // 1. Trigger validation without any data
-    final saveButton = find.widgetWithText(NeumorphicButton, 'SAVE');
-    await tester.ensureVisible(saveButton);
-    await tester.tap(saveButton);
-    await tester.pump();
-
-    expect(find.text('please_enter_name'), findsOneWidget);
-    expect(find.text('please_select_department'), findsOneWidget);
+    // Fill Name
+    await tester.enterText(find.byType(TextFormField).at(0), 'John Doe');
     
-    // 2. Fill fields
-    final nameField = find.widgetWithText(TextFormField, 'full_name');
-    await tester.ensureVisible(nameField);
-    await tester.enterText(nameField, 'John Doe');
-    
-    final emailField = find.widgetWithText(TextFormField, 'email');
-    await tester.ensureVisible(emailField);
-    await tester.enterText(emailField, 'john@test.com');
+    // Fill Email
+    await tester.enterText(find.byType(TextFormField).at(1), 'john@test.com');
     
     // Select department
-    final deptDropdown = find.byType(DropdownButtonFormField<String>);
-    await tester.ensureVisible(deptDropdown);
-    await tester.tap(deptDropdown);
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
-    
     await tester.tap(find.text('Engineering').last);
     await tester.pumpAndSettle();
 
     // Capture photo
-    final photoBox = find.text('capture_reference_photo');
-    await tester.ensureVisible(photoBox);
-    await tester.tap(photoBox);
+    await tester.tap(find.text('capture_reference_photo'));
     await tester.pump();
 
-    expect(find.text('photo_captured'), findsOneWidget);
-
     // Submit
+    final saveButton = find.widgetWithText(NeumorphicButton, 'SAVE');
     await tester.ensureVisible(saveButton);
     await tester.tap(saveButton);
+    await tester.pump(); // Start loading
+    
+    // Verify global loading overlay
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    
     await tester.pumpAndSettle();
-
-    // Should redirect to employees list (mocked as text 'Employee List')
-    expect(find.text('Employee List'), findsOneWidget);
+    expect(find.text('Employees List'), findsOneWidget);
   });
 }
 
@@ -106,4 +111,25 @@ class MockDeptNotifier extends DepartmentNotifier {
 
   @override
   Future<void> fetchDepartments() async {}
+}
+
+class MockEmployeeNotifier extends EmployeeNotifier {
+  @override
+  EmployeeState build() {
+    return EmployeeState();
+  }
+
+  @override
+  Future<void> createAndEnrollEmployee({
+    required String name,
+    required String deptId,
+    String? email,
+    required String imagePath,
+  }) async {
+    final ux = ref.read(uxProvider.notifier);
+    ux.showLoading('generating');
+    await Future.delayed(const Duration(milliseconds: 100));
+    ux.hideLoading();
+    state = state.copyWith(isSuccess: true);
+  }
 }

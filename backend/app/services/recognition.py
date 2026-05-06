@@ -69,6 +69,9 @@ class RecognitionService:
         if threshold is None:
             org = await self.org_repo.get_org(org_id)
             threshold = org.recognition_threshold if org and org.recognition_threshold else settings.RECOGNITION_THRESHOLD
+        
+        # Enforce minimum threshold of 0.7 as per technical requirements
+        threshold = max(threshold, 0.7)
             
         result = await self.vector_repo.search_embedding(org_id, embedding)
         
@@ -107,18 +110,17 @@ class RecognitionService:
             # 3. Vérification de Vivacité (Anti-Spoofing)
             # On passe l'image RGB et la bounding box
             liveness_result = self.liveness_service.is_live(img, bbox)
-            print(bbox)
             
-            # if not liveness_result.get("is_live", True):
-              #   logger.warning(f"Tentative de spoofing détectée ou vivacité insuffisante. Score: {liveness_result.get('score')}")
-               #  return {
-                  #   "success": False,
-                  #   "message": "Liveness check failed. Please ensure you are a real person.",
-                   #  "is_live": False,
-                #      "match": False,
-                  #   "employee_id": None,
-                  #   "score": float(liveness_result.get("score", 0.0))
-                # }
+            if not liveness_result.get("is_live", True):
+                logger.warning(f"Tentative de spoofing détectée ou vivacité insuffisante. Score: {liveness_result.get('score')}")
+                return {
+                    "success": False,
+                    "message": "Vérification échouée",
+                    "is_live": False,
+                    "match": False,
+                    "employee_id": None,
+                    "score": float(liveness_result.get("score", 0.0))
+                }
             
             # 4. Identification (Matching)
             match_result = await self.match_face(org_id, embedding)

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:faciale/main.dart';
 import 'package:faciale/features/auth/login_screen.dart';
 import 'package:faciale/features/auth/auth_provider.dart';
 import 'package:faciale/core/widgets/neumorphic_button.dart';
@@ -12,6 +13,8 @@ import 'package:mockito/mockito.dart';
 import 'package:http/http.dart' as http;
 import 'package:go_router/go_router.dart';
 import 'auth_provider_test.mocks.dart';
+
+import 'package:faciale/features/dashboard/dashboard_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -42,8 +45,6 @@ void main() {
     );
 
     expect(find.byType(Logo), findsOneWidget);
-    // Note: since easy_localization is not fully initialized in tests, 
-    // it usually returns the key if not mocked.
     expect(find.byType(TextField), findsNWidgets(2));
     expect(find.byType(NeumorphicButton), findsOneWidget);
   });
@@ -55,34 +56,18 @@ void main() {
     when(mockClient.post(any, body: anyNamed('body')))
         .thenAnswer((_) => completer.future);
 
-    final router = GoRouter(
-      initialLocation: '/login',
-      routes: [
-        GoRoute(
-          path: '/login',
-          builder: (context, state) => const LoginScreen(),
-        ),
-        GoRoute(
-          path: '/dashboard',
-          builder: (context, state) => const Scaffold(body: Text('Dashboard')),
-        ),
-      ],
-    );
-
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           httpClientProvider.overrideWithValue(mockClient),
           secureStorageProvider.overrideWithValue(mockStorage),
         ],
-        child: MaterialApp.router(
-          routerConfig: router,
-        ),
+        child: const FacialeApp(),
       ),
     );
 
-    await tester.enterText(find.byType(TextField).first, 'admin@example.com');
-    await tester.enterText(find.byType(TextField).last, 'password');
+    await tester.enterText(find.byType(TextField).at(0), 'admin@example.com');
+    await tester.enterText(find.byType(TextField).at(1), 'password');
     
     await tester.tap(find.byType(NeumorphicButton));
     await tester.pump(); // Start loading
@@ -93,7 +78,7 @@ void main() {
     await tester.pumpAndSettle(); 
 
     // Verification: Redirect to Dashboard
-    expect(find.text('Dashboard'), findsOneWidget);
+    expect(find.byType(DashboardScreen), findsOneWidget);
   });
 
   testWidgets('Invalid Credentials shows snackbar', (WidgetTester tester) async {
@@ -107,14 +92,12 @@ void main() {
           httpClientProvider.overrideWithValue(mockClient),
           secureStorageProvider.overrideWithValue(mockStorage),
         ],
-        child: const MaterialApp(
-          home: LoginScreen(),
-        ),
+        child: const FacialeApp(),
       ),
     );
 
-    await tester.enterText(find.byType(TextField).first, 'wrong@example.com');
-    await tester.enterText(find.byType(TextField).last, 'wrong');
+    await tester.enterText(find.byType(TextField).at(0), 'wrong@example.com');
+    await tester.enterText(find.byType(TextField).at(1), 'wrong');
     
     await tester.tap(find.byType(NeumorphicButton));
     await tester.pump();

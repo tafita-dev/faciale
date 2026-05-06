@@ -73,3 +73,9 @@
 - **Goal:** Modernize UI with "I-POINTEO" branding, role-based profile displays, and enhanced data visualization with photos/logos.
 - **Status:** IN_PROGRESS
 - **Ref:** User Request (April 2026) - Branding & UX Polish
+
+## [Epic 13] Attendance Logic Refinement & Immersive UX
+
+- **Goal:** Implement automatic entry/exit toggling and modernize the scanning UI for a professional "I-POINTEO" experience.
+- **Status:** IN_PROGRESS
+- **Ref:** User Request (May 2026) - Refined Attendance Spec

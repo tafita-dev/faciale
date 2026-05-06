@@ -51,7 +51,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
 
     // Use front camera if available
     final frontCamera = cameras.firstWhere(
-      (camera) => camera.lensDirection == CameraLensDirection.back,
+      (camera) => camera.lensDirection == CameraLensDirection.front,
       orElse: () => cameras.first,
     );
 
@@ -229,7 +229,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3A7DFF)),
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                       strokeWidth: 6,
                     ),
                     const SizedBox(height: 24),
@@ -332,7 +332,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
                       ref.read(scannerProvider.notifier).reset();
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3A7DFF),
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(

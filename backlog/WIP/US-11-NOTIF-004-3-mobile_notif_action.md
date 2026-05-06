@@ -1,7 +1,7 @@
 ---
 id: US-11-NOTIF-004-3
 title: Mobile - Push Notification Action & Navigation
-status: READY
+status: REWORK
 type: feature
 priority: LOW
 ---
@@ -25,3 +25,8 @@ As an Admin, I want to be taken to the relevant details when I tap a push notifi
 # Technical Notes (Architect)
 - Implement deep linking or notification data handling in `FirebaseMessaging.onMessageOpenedApp`.
 - Pass the attendance log ID in the FCM data payload.
+
+# Reviewer Feedback
+
+- **Status:** REWORK
+- **Feedback:** The implementation is completely missing. While a plan was proposed, no code changes were found for the AttendanceLogDetailsScreen, router updates, or NotificationService navigation logic. The developer must proceed to implementation as planned before this ticket can be finalized.

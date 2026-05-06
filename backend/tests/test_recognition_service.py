@@ -220,3 +220,27 @@ async def test_match_face_no_result(recognition_service):
     assert result["match"] is False
     assert result["employee_id"] is None
     assert result["score"] == 0.0
+
+@pytest.mark.asyncio
+async def test_match_face_enforce_min_threshold(recognition_service):
+    service, _, _ = recognition_service
+    
+    org_id = "org_a"
+    embedding = np.random.rand(512).astype(np.float32)
+    
+    mock_repo = MagicMock()
+    # Mock return value score is 0.65 (above 0.5 but below 0.7)
+    mock_repo.search_embedding = AsyncMock(return_value={"employee_id": "emp123", "score": 0.65})
+    service.vector_repo = mock_repo
+    
+    # Mock Org with very low threshold (0.5)
+    mock_org_repo = MagicMock()
+    mock_org = MagicMock()
+    mock_org.recognition_threshold = 0.5
+    mock_org_repo.get_org = AsyncMock(return_value=mock_org)
+    service.org_repo = mock_org_repo
+    
+    # It should still fail because 0.65 < 0.7 (enforced minimum)
+    result = await service.match_face(org_id, embedding, threshold=None)
+    assert result["match"] is False
+    assert result["employee_id"] is None
