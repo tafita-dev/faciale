@@ -186,11 +186,17 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
           SafeArea(
             child: Column(
               children: [
-                Align(
-                  alignment: Alignment.topLeft,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
-                    onPressed: () => Navigator.of(context).pop(),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                      _buildModeSelector(context, ref, scannerState),
+                    ],
                   ),
                 ),
                 const Spacer(),
@@ -351,5 +357,58 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
       case 'red': return Icons.error;
       default: return Icons.info;
     }
+  }
+
+  Widget _buildModeSelector(BuildContext context, WidgetRef ref, ScannerState state) {
+    String label;
+    IconData icon;
+    Color color;
+
+    switch (state.scanningMode) {
+      case ScanningMode.auto:
+        label = 'AUTO';
+        icon = Icons.sync_rounded;
+        color = Colors.white70;
+        break;
+      case ScanningMode.entry:
+        label = 'ENTRY';
+        icon = Icons.login_rounded;
+        color = Colors.greenAccent;
+        break;
+      case ScanningMode.exit:
+        label = 'EXIT';
+        icon = Icons.logout_rounded;
+        color = AppColors.primary;
+        break;
+    }
+
+    return GestureDetector(
+      onTap: () {
+        final nextMode = ScanningMode.values[(state.scanningMode.index + 1) % ScanningMode.values.length];
+        ref.read(scannerProvider.notifier).setScanningMode(nextMode);
+        SystemSound.play(SystemSoundType.click);
+      },
+      child: NeumorphicCard(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        borderRadius: 20,
+        backgroundColor: Colors.black.withOpacity(0.5),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -33,9 +33,12 @@ class MockAttendanceRepository extends _i1.Mock
   }
 
   @override
-  _i3.Future<Map<String, dynamic>> checkIn(String? imagePath) =>
+  _i3.Future<Map<String, dynamic>> checkIn(
+    String? imagePath, {
+    String? forceType,
+  }) =>
       (super.noSuchMethod(
-            Invocation.method(#checkIn, [imagePath]),
+            Invocation.method(#checkIn, [imagePath], {#forceType: forceType}),
             returnValue: _i3.Future<Map<String, dynamic>>.value(
               <String, dynamic>{},
             ),

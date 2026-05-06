@@ -12,8 +12,15 @@ enum ScannerStatus {
   failure
 }
 
+enum ScanningMode {
+  auto,
+  entry,
+  exit
+}
+
 class ScannerState {
   final ScannerStatus status;
+  final ScanningMode scanningMode;
   final String? message;
   final String? matchedName;
   final String? checkInType;
@@ -23,6 +30,7 @@ class ScannerState {
 
   ScannerState({
     this.status = ScannerStatus.idle,
+    this.scanningMode = ScanningMode.auto,
     this.message,
     this.matchedName,
     this.checkInType,
@@ -33,6 +41,7 @@ class ScannerState {
 
   ScannerState copyWith({
     ScannerStatus? status,
+    ScanningMode? scanningMode,
     String? message,
     String? matchedName,
     String? checkInType,
@@ -42,6 +51,7 @@ class ScannerState {
   }) {
     return ScannerState(
       status: status ?? this.status,
+      scanningMode: scanningMode ?? this.scanningMode,
       message: message ?? this.message,
       matchedName: matchedName ?? this.matchedName,
       checkInType: checkInType ?? this.checkInType,
@@ -60,6 +70,10 @@ class ScannerNotifier extends Notifier<ScannerState> {
   ScannerState build() {
     ref.onDispose(() => _resetTimer?.cancel());
     return ScannerState(status: ScannerStatus.scanning, message: 'align_your_face'.tr());
+  }
+
+  void setScanningMode(ScanningMode mode) {
+    state = state.copyWith(scanningMode: mode);
   }
 
   void setStatus(ScannerStatus status, {String? message, String? name, String? type, double? score, String? error, String? uiColor}) {
@@ -96,7 +110,12 @@ class ScannerNotifier extends Notifier<ScannerState> {
 
     try {
       final repository = ref.read(attendanceRepositoryProvider);
-      final result = await repository.checkIn(imagePath);
+      
+      String? forceType;
+      if (state.scanningMode == ScanningMode.entry) forceType = 'entry';
+      if (state.scanningMode == ScanningMode.exit) forceType = 'exit';
+
+      final result = await repository.checkIn(imagePath, forceType: forceType);
 
       if (result['success'] == true) {
         final data = result['data'];

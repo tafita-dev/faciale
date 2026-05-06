@@ -14,7 +14,7 @@ class AttendanceRepository {
 
   AttendanceRepository(this._client, this._storage, this._baseUrl);
 
-  Future<Map<String, dynamic>> checkIn(String imagePath) async {
+  Future<Map<String, dynamic>> checkIn(String imagePath, {String? forceType}) async {
     final token = await _storage.read(key: 'jwt_token');
     
     if (token == null) {
@@ -25,6 +25,10 @@ class AttendanceRepository {
     final request = http.MultipartRequest('POST', url);
     
     request.headers['Authorization'] = 'Bearer $token';
+
+    if (forceType != null) {
+      request.fields['force_type'] = forceType;
+    }
           final extension = imagePath.split('.').last.toLowerCase();
 final type = (extension == 'png') ? 'png' : 'jpeg';
 
