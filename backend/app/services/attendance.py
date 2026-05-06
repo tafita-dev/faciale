@@ -50,7 +50,7 @@ class AttendanceService:
         except Exception:
             return AttendanceStatus.present
 
-    async def process_attendance(self, org_id: str, img_bytes: bytes, user_id: str = None) -> dict:
+    async def process_attendance(self, org_id: str, img_bytes: bytes, user_id: str = None, force_type: str = None) -> dict:
         """
         Processes an attendance attempt:
         1. Perform end-to-end recognition (liveness + matching).
@@ -78,9 +78,12 @@ class AttendanceService:
             employee_id = rec_result["employee_id"]
             now = datetime.now(timezone.utc)
             
-            # Toggling logic: count successful logs today
-            count = await self.attendance_repo.count_logs_today(org_id, employee_id)
-            att_type = AttendanceType.entry if count % 2 == 0 else AttendanceType.exit
+            # Toggling logic (if force_type not provided)
+            if force_type:
+                att_type = AttendanceType(force_type)
+            else:
+                count = await self.attendance_repo.count_logs_today(org_id, employee_id)
+                att_type = AttendanceType.entry if count % 2 == 0 else AttendanceType.exit
             
             # Determine status (Entry/Late for entry, success for exit)
             if att_type == AttendanceType.entry:

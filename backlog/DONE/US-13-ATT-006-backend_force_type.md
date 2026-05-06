@@ -1,7 +1,7 @@
 ---
 id: US-13-ATT-006
 title: Backend - Support forced attendance type in unified API
-status: READY
+status: DONE
 type: feature
 ---
 

@@ -2,13 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:camera/camera.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/neumorphic_card.dart';
-import '../employees/camera_provider.dart';
 import 'scanner_state.dart';
-import 'face_oval_painter.dart';
+import 'facial_scanner_widget.dart';
 
 class ScannerScreen extends ConsumerStatefulWidget {
   const ScannerScreen({super.key});
@@ -17,134 +15,34 @@ class ScannerScreen extends ConsumerStatefulWidget {
   ConsumerState<ScannerScreen> createState() => _ScannerScreenState();
 }
 
-class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProviderStateMixin {
-  CameraController? _controller;
-  bool _isInitialized = false;
-  Timer? _scanTimer;
-  late AnimationController _pulseController;
+class _ScannerScreenState extends ConsumerState<ScannerScreen> {
 
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
     // Hide status bar and navigation bar for immersive view
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   @override
   void dispose() {
-    _scanTimer?.cancel();
-    _controller?.dispose();
-    _pulseController.dispose();
     // Restore system UI
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
-  }
-
-  Future<void> _initializeCamera() async {
-    final cameras = await ref.read(camerasProvider.future);
-    if (cameras.isEmpty) return;
-
-    // Use front camera if available
-    final frontCamera = cameras.firstWhere(
-      (camera) => camera.lensDirection == CameraLensDirection.front,
-      orElse: () => cameras.first,
-    );
-
-    _controller = CameraController(
-      frontCamera,
-      ResolutionPreset.high,
-      enableAudio: false,
-    );
-
-    try {
-      await _controller!.initialize();
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
-        _startScanning();
-      }
-    } catch (e) {
-      debugPrint('Camera initialization error: $e');
-    }
-  }
-
-  void _startScanning() {
-    _scanTimer?.cancel();
-    _scanTimer = Timer(const Duration(seconds: 2), _scanningLoop);
-  }
-
-  Future<void> _scanningLoop() async {
-    if (!mounted) return;
-    
-    // Only attempt capture if we are in scanning state
-    final scannerState = ref.read(scannerProvider);
-    if (scannerState.status == ScannerStatus.scanning) {
-      await _attemptCapture();
-    }
-    
-    // Schedule next scan if still mounted
-    if (mounted) {
-      _scanTimer = Timer(const Duration(seconds: 2), _scanningLoop);
-    }
-  }
-
-  bool _isCapturing = false;
-
-  Future<void> _attemptCapture() async {
-    // 1. Guard against multiple simultaneous captures
-    if (!mounted || _isCapturing) return;
-    
-    // 2. Camera readiness check
-    if (_controller == null || !_controller!.value.isInitialized) {
-      return;
-    }
-    
-    if (_controller!.value.isTakingPicture) {
-      return;
-    }
-
-    try {
-      _isCapturing = true;
-      final image = await _controller!.takePicture();
-      
-      // 3. Re-verify status before calling backend (status might have changed during takePicture)
-      if (mounted && ref.read(scannerProvider).status == ScannerStatus.scanning) {
-        await ref.read(scannerProvider.notifier).processImage(image.path);
-      }
-    } catch (e) {
-      debugPrint('Capture error: $e');
-    } finally {
-      _isCapturing = false;
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final scannerState = ref.watch(scannerProvider);
 
-    // Manage animation based on status
-    if (scannerState.status == ScannerStatus.scanning) {
-      if (!_pulseController.isAnimating) _pulseController.repeat();
-    } else {
-      if (_pulseController.isAnimating) _pulseController.stop();
-    }
-
     // Listen for state changes to manage the modal
     ref.listen(scannerProvider, (previous, next) {
-      // 1. Show modal on Success or Failure
       if ((next.status == ScannerStatus.success || next.status == ScannerStatus.failure) && 
           (previous?.status != ScannerStatus.success && previous?.status != ScannerStatus.failure)) {
         SystemSound.play(SystemSoundType.click);
         _showResultModal(context, next);
       }
       
-      // 2. Hide modal when resetting to scanning
       if (next.status == ScannerStatus.scanning && 
           (previous?.status == ScannerStatus.success || previous?.status == ScannerStatus.failure)) {
         if (Navigator.of(context).canPop()) {
@@ -158,31 +56,16 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Camera Preview - Only show if scanning
-          if (_isInitialized && _controller != null && scannerState.status == ScannerStatus.scanning)
-            Center(
-              child: CameraPreview(_controller!),
-            )
-          else if (scannerState.status == ScannerStatus.scanning)
-            const Center(child: CircularProgressIndicator(color: Colors.white))
-          else
-            Container(color: Colors.black), // Black screen during processing/success/failure
+          FacialScannerWidget(
+            showModeToggle: true,
+            onImageCaptured: (path) async {
+              if (mounted && ref.read(scannerProvider).status == ScannerStatus.scanning) {
+                await ref.read(scannerProvider.notifier).processImage(path);
+              }
+            },
+          ),
 
-          // 2. Face Oval Overlay with Animation - Only during scanning
-          if (scannerState.status == ScannerStatus.scanning)
-            AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, child) {
-                return CustomPaint(
-                  painter: FaceOvalPainter(
-                    status: scannerState.status,
-                    animationValue: _pulseController.value,
-                  ),
-                );
-              },
-            ),
-
-          // 3. UI Overlays (Back button, status, etc.)
+          // UI Overlays (Back button, status, etc.)
           SafeArea(
             child: Column(
               children: [
@@ -224,7 +107,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
             ),
           ),
 
-          // 4. Global Loading Overlay (Minimalist)
+          // Global Loading Overlay
           if (scannerState.status == ScannerStatus.processing)
             Container(
               color: Colors.black.withOpacity(0.7),

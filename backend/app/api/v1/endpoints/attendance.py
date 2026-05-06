@@ -13,6 +13,7 @@ router = APIRouter()
 async def check_in(
     *,
     file: UploadFile = File(...),
+    force_type: str | None = None,
     current_user: dict = Depends(deps.check_only_user),
     attendance_service: AttendanceService = Depends(deps.get_attendance_service),
     employee_repo: EmployeeRepository = Depends(deps.get_employee_repository),
@@ -25,6 +26,17 @@ async def check_in(
     """
     org_id = current_user.get("org_id")
     user_id = current_user.get("_id")
+    
+    # 0. Validate force_type
+    if force_type and force_type not in ["entry", "exit"]:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "success": False,
+                "message": "force_type doit être 'entry' ou 'exit'",
+                "ui": {"color": "red"}
+            }
+        )
     
     # 1. Basic validation
     if file.content_type not in ["image/jpeg", "image/png"]:
@@ -54,7 +66,7 @@ async def check_in(
     
     # 3. Process attendance (Liveness + Matching + Logging)
     try:
-        result = await attendance_service.process_attendance(org_id, contents, user_id=user_id)
+        result = await attendance_service.process_attendance(org_id, contents, user_id=user_id, force_type=force_type)
     except ValueError as e:
         error_msg = str(e)
         message = "Erreur de traitement"

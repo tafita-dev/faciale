@@ -3,6 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'attendance_repository.dart';
+import 'face_detector_service.dart';
+
+final faceDetectorServiceProvider = Provider<FaceDetectorService>((ref) {
+  final service = FaceDetectorService();
+  ref.onDispose(() => service.dispose());
+  return service;
+});
 
 enum ScannerStatus {
   idle,
@@ -88,27 +95,63 @@ class ScannerNotifier extends Notifier<ScannerState> {
       uiColor: uiColor,
     );
 
-    // Auto reset after 3 seconds for failure AND success
+    // Auto reset after 1 second for failure AND success
     if (status == ScannerStatus.failure || status == ScannerStatus.success) {
-      _resetTimer = Timer(const Duration(seconds: 3), () {
+      _resetTimer = Timer(const Duration(seconds: 1), () {
         reset();
       });
     }
   }
 
   Future<void> processImage(String imagePath) async {
-    // 1. Double-check status and local processing flag to prevent multiple calls
     if (state.status != ScannerStatus.scanning || _isProcessing) {
-      debugPrint('ProcessImage ignored: status=${state.status}, isProcessing=$_isProcessing');
       return;
     }
 
     _isProcessing = true;
-    
-    // 2. Immediately set status to processing to block UI-side calls
-    setStatus(ScannerStatus.processing, message: 'analyzing'.tr());
 
     try {
+      // Local detection first
+      final faceDetector = ref.read(faceDetectorServiceProvider);
+      final faces = await faceDetector.detectFaces(imagePath);
+
+      if (faces.isEmpty) {
+        // No face detected, keep scanning
+        _isProcessing = false;
+        return;
+      }
+
+      // Local liveness check
+      final face = faces.first;
+      final isAlive = (face.leftEyeOpenProbability ?? 0) > 0.5 &&
+                      (face.rightEyeOpenProbability ?? 0) > 0.5;
+
+      // Local orientation check (centered within 15 degrees)
+      final isCentered = (face.headEulerAngleX?.abs() ?? 0) < 15 &&
+                         (face.headEulerAngleY?.abs() ?? 0) < 15;
+
+      if (!isAlive) {
+        setStatus(
+          ScannerStatus.failure,
+          message: 'liveness_failed'.tr(),
+          uiColor: 'red',
+        );
+        _isProcessing = false;
+        return;
+      }
+
+      if (!isCentered) {
+        setStatus(
+          ScannerStatus.scanning,
+          message: 'center_your_face'.tr(),
+        );
+        _isProcessing = false;
+        return;
+      }
+
+      // Face detected and alive, proceed to API
+      setStatus(ScannerStatus.processing, message: 'analyzing'.tr());
+
       final repository = ref.read(attendanceRepositoryProvider);
       
       String? forceType;
@@ -159,3 +202,4 @@ class ScannerNotifier extends Notifier<ScannerState> {
 final scannerProvider = NotifierProvider<ScannerNotifier, ScannerState>(() {
   return ScannerNotifier();
 });
+
