@@ -8,7 +8,7 @@ import 'package:faciale/features/attendance/scanner_state.dart';
 import 'package:faciale/features/employees/camera_provider.dart';
 
 void main() {
-  testWidgets('ScannerScreen Hotfix: Success modal and Processing overlay', (WidgetTester tester) async {
+  testWidgets('ScannerScreen: Success/Failure modals and Processing overlay', (WidgetTester tester) async {
     // Mock camera description
     const camera = CameraDescription(
       name: '0',
@@ -46,8 +46,8 @@ void main() {
     );
     await tester.pump();
     
-    // Check for global overlay text
-    expect(find.text('ANALYZING'), findsOneWidget);
+    // Check for global overlay text - Should NOT be present
+    expect(find.text('ANALYZING'), findsNothing);
     // Camera should be hidden
     expect(find.byType(CameraPreview), findsNothing);
 
@@ -57,46 +57,45 @@ void main() {
       message: 'Success', 
       name: 'John Doe',
       type: 'entry',
-      score: 0.95
+      score: 0.95,
+      uiColor: 'green'
     );
     
     // Pump several times to let the modal appear
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     
-    // Modal title
+    // Modal title (from message)
     expect(find.text('SUCCESS'), findsOneWidget);
     // Employee name
     expect(find.text('John Doe'), findsOneWidget);
     // OK button
     expect(find.text('OK'), findsOneWidget);
 
-    // 4. Test Success does NOT auto-reset
-    await tester.pump(const Duration(seconds: 5));
-    await tester.pump();
-    expect(find.text('OK'), findsOneWidget);
-
-    // 5. Test OK button resets state
-    await tester.tap(find.text('OK'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500)); // wait for modal to close
-    
-    // Modal should be gone
+    // 4. Test Success DOES auto-reset
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('OK'), findsNothing);
     // Should be back to scanning
     expect(find.text('ALIGN_YOUR_FACE'), findsOneWidget);
 
-    // 6. Test Failure State: Existing UI preserved (no modal)
+    // 5. Test Failure State: Modal appears
     container.read(scannerProvider.notifier).setStatus(
       ScannerStatus.failure,
       message: 'failed',
-      error: 'Too dark'
+      error: 'Too dark',
+      uiColor: 'red'
     );
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     
-    // Should show failure card in the column
+    // Should show FAILED in a dialog
+    expect(find.byType(Dialog), findsOneWidget);
     expect(find.text('FAILED'), findsOneWidget);
-    // Should NOT be a dialog (modal)
+    
+    // Auto-reset failure too
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(Dialog), findsNothing);
   });
 }

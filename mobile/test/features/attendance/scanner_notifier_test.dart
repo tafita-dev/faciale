@@ -4,7 +4,7 @@ import 'package:mockito/mockito.dart';
 import 'package:faciale/features/attendance/attendance_repository.dart';
 import 'package:faciale/features/attendance/scanner_state.dart';
 import 'package:fake_async/fake_async.dart';
-import 'scanner_notifier_test.mocks.dart';
+import 'US_13_ATT_003_test.mocks.dart';
 
 void main() {
   late MockAttendanceRepository mockRepository;
@@ -23,7 +23,7 @@ void main() {
     container.dispose();
   });
 
-  test('processImage success populates new fields and does not auto-reset', () {
+  test('processImage success populates new fields and auto-resets', () {
     fakeAsync((async) {
       when(mockRepository.checkIn(any)).thenAnswer((_) async => {
         'success': true,
@@ -49,8 +49,8 @@ void main() {
       // Advance time by 5 seconds
       async.elapse(const Duration(seconds: 5));
       
-      // Should still be in success state (no auto-reset)
-      expect(container.read(scannerProvider).status, ScannerStatus.success);
+      // Should be back to scanning
+      expect(container.read(scannerProvider).status, ScannerStatus.scanning);
     });
   });
 

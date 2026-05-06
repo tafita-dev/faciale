@@ -1,7 +1,7 @@
 ---
 id: US-13-ATT-004
 title: Mobile - Attendance Result Feedback
-status: READY
+status: DONE
 type: feature
 ---
 
@@ -16,19 +16,19 @@ As a User, I want clear and instant feedback after my face is scanned, so that I
 
 # Acceptance Criteria (DoD)
 
-- [ ] **Scenario 1: Processing state**
+- [x] **Scenario 1: Processing state**
     - Given an image is being processed by the backend
     - Then a global loader (circular indicator) is shown on top of the screen
     - And the camera preview is temporarily paused or obscured
     - And no text is displayed with the loader (minimalist)
 
-- [ ] **Scenario 2: Result Popup**
+- [x] **Scenario 2: Result Popup**
     - Given the API returns a response (Success or Error)
     - Then a popup/modal appears instantly
     - And it shows the message returned by the API (e.g., "Bienvenue Tafita")
     - And the theme matches the dynamic color (Green: entry, Blue: exit, Red: error)
 
-- [ ] **Scenario 3: Automatic reset**
+- [x] **Scenario 3: Automatic reset**
     - Given a result modal is displayed
     - When the user taps "OK" or after 3 seconds of inactivity
     - Then the modal disappears

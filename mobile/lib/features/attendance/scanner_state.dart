@@ -19,6 +19,7 @@ class ScannerState {
   final String? checkInType;
   final double? score;
   final String? error;
+  final String? uiColor;
 
   ScannerState({
     this.status = ScannerStatus.idle,
@@ -27,6 +28,7 @@ class ScannerState {
     this.checkInType,
     this.score,
     this.error,
+    this.uiColor,
   });
 
   ScannerState copyWith({
@@ -36,6 +38,7 @@ class ScannerState {
     String? checkInType,
     double? score,
     String? error,
+    String? uiColor,
   }) {
     return ScannerState(
       status: status ?? this.status,
@@ -44,6 +47,7 @@ class ScannerState {
       checkInType: checkInType ?? this.checkInType,
       score: score ?? this.score,
       error: error ?? this.error,
+      uiColor: uiColor ?? this.uiColor,
     );
   }
 }
@@ -58,7 +62,7 @@ class ScannerNotifier extends Notifier<ScannerState> {
     return ScannerState(status: ScannerStatus.scanning, message: 'align_your_face'.tr());
   }
 
-  void setStatus(ScannerStatus status, {String? message, String? name, String? type, double? score, String? error}) {
+  void setStatus(ScannerStatus status, {String? message, String? name, String? type, double? score, String? error, String? uiColor}) {
     _resetTimer?.cancel();
     state = state.copyWith(
       status: status, 
@@ -66,12 +70,12 @@ class ScannerNotifier extends Notifier<ScannerState> {
       matchedName: name, 
       checkInType: type,
       score: score,
-      error: error
+      error: error,
+      uiColor: uiColor,
     );
 
-    // Auto reset after 3 seconds ONLY for failure
-    // Success requires manual acknowledgement via OK button
-    if (status == ScannerStatus.failure) {
+    // Auto reset after 3 seconds for failure AND success
+    if (status == ScannerStatus.failure || status == ScannerStatus.success) {
       _resetTimer = Timer(const Duration(seconds: 3), () {
         reset();
       });
@@ -96,25 +100,30 @@ class ScannerNotifier extends Notifier<ScannerState> {
 
       if (result['success'] == true) {
         final data = result['data'];
+        final ui = result['ui'] ?? {};
         setStatus(
           ScannerStatus.success, 
           message: result['message'],
           name: data['employee_name'],
           type: data['type'],
           score: data['score'] != null ? (data['score'] as num).toDouble() : null,
+          uiColor: ui['color'],
         );
       } else {
+        final ui = result['ui'] ?? {};
         setStatus(
           ScannerStatus.failure,
           message: 'failed'.tr(),
-          error: result['message']
+          error: result['message'],
+          uiColor: ui['color'] ?? 'red',
         );
       }
     } catch (e) {
       setStatus(
         ScannerStatus.failure,
         message: 'error'.tr(),
-        error: e.toString()
+        error: e.toString(),
+        uiColor: 'red',
       );
     } finally {
       _isProcessing = false;

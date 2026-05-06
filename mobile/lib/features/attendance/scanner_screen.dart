@@ -135,11 +135,21 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
       if (_pulseController.isAnimating) _pulseController.stop();
     }
 
-    // Listen for success to show modal
+    // Listen for state changes to manage the modal
     ref.listen(scannerProvider, (previous, next) {
-      if (next.status == ScannerStatus.success && previous?.status != ScannerStatus.success) {
+      // 1. Show modal on Success or Failure
+      if ((next.status == ScannerStatus.success || next.status == ScannerStatus.failure) && 
+          (previous?.status != ScannerStatus.success && previous?.status != ScannerStatus.failure)) {
         SystemSound.play(SystemSoundType.click);
-        _showSuccessModal(context, next);
+        _showResultModal(context, next);
+      }
+      
+      // 2. Hide modal when resetting to scanning
+      if (next.status == ScannerStatus.scanning && 
+          (previous?.status == ScannerStatus.success || previous?.status == ScannerStatus.failure)) {
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
       }
     });
 
@@ -148,8 +158,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Camera Preview - Only show if not processing/success/failure or as requested: 
-          // "désactiver temporairement la caméra pendant le traitement backend"
+          // 1. Camera Preview - Only show if scanning
           if (_isInitialized && _controller != null && scannerState.status == ScannerStatus.scanning)
             Center(
               child: CameraPreview(_controller!),
@@ -157,7 +166,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
           else if (scannerState.status == ScannerStatus.scanning)
             const Center(child: CircularProgressIndicator(color: Colors.white))
           else
-            Container(color: Colors.black), // Black screen during processing/success
+            Container(color: Colors.black), // Black screen during processing/success/failure
 
           // 2. Face Oval Overlay with Animation - Only during scanning
           if (scannerState.status == ScannerStatus.scanning)
@@ -204,45 +213,19 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
                     ),
                   ),
                 
-                const SizedBox(height: 40),
-
-                // Failure Card (Existing UI preserved as requested)
-                if (scannerState.status == ScannerStatus.failure)
-                  _buildResultCard(
-                    title: 'failed'.tr(),
-                    subtitle: _getErrorMessage(scannerState.error),
-                    color: Colors.red,
-                    icon: Icons.error,
-                  ),
-
-                const SizedBox(height: 60),
+                const SizedBox(height: 100),
               ],
             ),
           ),
 
-          // 4. Global Loading Overlay
+          // 4. Global Loading Overlay (Minimalist)
           if (scannerState.status == ScannerStatus.processing)
             Container(
               color: Colors.black.withOpacity(0.7),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                      strokeWidth: 6,
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'analyzing'.tr().toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                  ],
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  strokeWidth: 6,
                 ),
               ),
             ),
@@ -251,7 +234,10 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
     );
   }
 
-  void _showSuccessModal(BuildContext context, ScannerState state) {
+  void _showResultModal(BuildContext context, ScannerState state) {
+    final color = _getUIColor(state.uiColor);
+    final icon = _getUIIcon(state.uiColor);
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -280,46 +266,41 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: color.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.check_circle, color: Colors.green, size: 60),
+                  child: Icon(icon, color: color, size: 60),
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'success'.tr().toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  state.matchedName ?? 'Unknown',
+                  (state.message ?? (state.status == ScannerStatus.success ? 'success'.tr() : 'failed'.tr())).toUpperCase(),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${state.checkInType == "entry" ? "check_in".tr() : "check_out".tr()}',
                   style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    letterSpacing: 1.2,
                   ),
                 ),
-                if (state.score != null) ...[
-                  const SizedBox(height: 4),
+                if (state.matchedName != null) ...[
+                  const SizedBox(height: 16),
                   Text(
-                    'Score: ${(state.score! * 100).toStringAsFixed(1)}%',
+                    state.matchedName!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                if (state.checkInType != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${state.checkInType == "entry" ? "check_in".tr() : "check_out".tr()}',
                     style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[500],
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -332,7 +313,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
                       ref.read(scannerProvider.notifier).reset();
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: color,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -354,72 +335,21 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> with TickerProvid
     );
   }
 
-  String _getErrorMessage(String? error) {
-    if (error == null) return 'try_again'.tr();
-    if (error.contains('Liveness')) {
-      return 'liveness_failed'.tr();
+  Color _getUIColor(String? colorStr) {
+    switch (colorStr) {
+      case 'green': return Colors.green;
+      case 'blue': return AppColors.primary;
+      case 'red': return Colors.red;
+      default: return AppColors.primary;
     }
-    if (error.contains('brighter')) {
-      return 'too_dark'.tr();
-    }
-    if (error.contains('still')) {
-      return 'hold_still'.tr();
-    }
-    if (error.contains('Multiple')) {
-      return 'multiple_faces'.tr();
-    }
-    if (error.contains('not found')) {
-      return 'face_not_recognized'.tr();
-    }
-    return error;
   }
 
-  Widget _buildResultCard({
-    required String title,
-    required String subtitle,
-    required Color color,
-    required IconData icon,
-  }) {
-    return NeumorphicCard(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      borderRadius: 24,
-      child: Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 40),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title.toUpperCase(), 
-                    style: TextStyle(
-                      fontSize: 18, 
-                      fontWeight: FontWeight.bold, 
-                      color: color,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  Text(
-                    subtitle, 
-                    style: const TextStyle(fontSize: 14, color: Colors.black87),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  IconData _getUIIcon(String? colorStr) {
+    switch (colorStr) {
+      case 'green': return Icons.check_circle;
+      case 'blue': return Icons.logout;
+      case 'red': return Icons.error;
+      default: return Icons.info;
+    }
   }
 }
