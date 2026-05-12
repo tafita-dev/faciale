@@ -4,11 +4,13 @@ enum UXMessageType { success, error, info }
 
 class UXMessage {
   final String text;
+  final List<String>? args;
   final UXMessageType type;
   final DateTime timestamp;
 
   UXMessage({
     required this.text,
+    this.args,
     this.type = UXMessageType.info,
   }) : timestamp = DateTime.now();
 }
@@ -52,21 +54,21 @@ class UXNotifier extends Notifier<UXState> {
     state = state.copyWith(isLoading: false, loadingMessage: null);
   }
 
-  void showSuccess(String text) {
+  void showSuccess(String text, {List<String>? args}) {
     state = state.copyWith(
-      message: UXMessage(text: text, type: UXMessageType.success),
+      message: UXMessage(text: text, args: args, type: UXMessageType.success),
     );
   }
 
-  void showError(String text) {
+  void showError(String text, {List<String>? args}) {
     state = state.copyWith(
-      message: UXMessage(text: text, type: UXMessageType.error),
+      message: UXMessage(text: text, args: args, type: UXMessageType.error),
     );
   }
 
-  void showInfo(String text) {
+  void showInfo(String text, {List<String>? args}) {
     state = state.copyWith(
-      message: UXMessage(text: text, type: UXMessageType.info),
+      message: UXMessage(text: text, args: args, type: UXMessageType.info),
     );
   }
 

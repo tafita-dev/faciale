@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:camera/camera.dart';
@@ -113,19 +114,29 @@ class _FacialScannerWidgetState extends ConsumerState<FacialScannerWidget> {
     if (_controller == null) return null;
 
     final sensorOrientation = _controller!.description.sensorOrientation;
-    final rotation = InputImageRotationValue.fromRawValue(sensorOrientation) ?? InputImageRotation.rotation0deg;
-    
-    final format = InputImageFormatValue.fromRawValue(image.format.raw) ?? InputImageFormat.yuv420;
+    final rotation = InputImageRotationValue.fromRawValue(sensorOrientation) ??
+        InputImageRotation.rotation0deg;
 
-    final plane = image.planes.first;
+    final format = InputImageFormatValue.fromRawValue(image.format.raw) ??
+        (defaultTargetPlatform == TargetPlatform.android
+            ? InputImageFormat.yuv420
+            : InputImageFormat.bgra8888);
+
+    if (image.planes.isEmpty) return null;
+
+    final WriteBuffer allBytes = WriteBuffer();
+    for (final Plane plane in image.planes) {
+      allBytes.putUint8List(plane.bytes);
+    }
+    final bytes = allBytes.done().buffer.asUint8List();
 
     return InputImage.fromBytes(
-      bytes: plane.bytes,
+      bytes: bytes,
       metadata: InputImageMetadata(
         size: Size(image.width.toDouble(), image.height.toDouble()),
         rotation: rotation,
         format: format,
-        bytesPerRow: plane.bytesPerRow,
+        bytesPerRow: image.planes.first.bytesPerRow,
       ),
     );
   }

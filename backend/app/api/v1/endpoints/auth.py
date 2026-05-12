@@ -135,6 +135,7 @@ async def read_users_me(
     current_user: dict = Depends(deps.get_current_user)
 ) -> Any:
     return {
+        "id": str(current_user["_id"]),
         "email": current_user["email"],
         "name": current_user.get("name"),
         "role": current_user.get("role"),

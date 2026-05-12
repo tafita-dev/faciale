@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'reports_state.dart';
 import 'attendance_log_model.dart';
+import 'analytics_model.dart';
 import 'export_service.dart';
 
 final exportServiceProvider = Provider((ref) => ExportService());
@@ -13,6 +14,42 @@ class ReportsNotifier extends Notifier<ReportsState> {
   @override
   ReportsState build() {
     return ReportsState();
+  }
+
+  Future<void> fetchAnalytics() async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      // Mocking the GET /api/v1/reports/analytics call
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final mockAnalytics = AnalyticsData(
+        avgPunctuality: 92.5,
+        peakArrivalTime: "08:30",
+        totalHoursWorked: 1240.5,
+        dailyTrends: [
+          DailyTrend(date: "2023-10-01", count: 45),
+          DailyTrend(date: "2023-10-02", count: 52),
+          DailyTrend(date: "2023-10-03", count: 48),
+          DailyTrend(date: "2023-10-04", count: 55),
+          DailyTrend(date: "2023-10-05", count: 50),
+          DailyTrend(date: "2023-10-06", count: 42),
+          DailyTrend(date: "2023-10-07", count: 10),
+        ],
+        statusBreakdown: StatusBreakdown(
+          present: 350,
+          late: 45,
+          absent: 25,
+        ),
+      );
+
+      state = state.copyWith(isLoading: false, analyticsData: mockAnalytics);
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to fetch analytics data',
+      );
+    }
   }
 
   Future<void> fetchLogs() async {

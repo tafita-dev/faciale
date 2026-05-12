@@ -14,8 +14,11 @@ class EmployeeRepository:
             return EmployeeInDB(**doc)
         return None
 
-    async def count_employees(self, org_id: str) -> int:
-        return await self.collection.count_documents({"org_id": org_id})
+    async def count_employees(self, org_id: str, dept_id: Optional[str] = None) -> int:
+        query = {"org_id": org_id}
+        if dept_id:
+            query["dept_id"] = dept_id
+        return await self.collection.count_documents(query)
 
     async def count_all(self) -> int:
         return await self.collection.count_documents({})

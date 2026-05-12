@@ -258,3 +258,180 @@ class AttendanceRepository:
             }
         ]
         return self.collection.aggregate(pipeline)
+
+    async def get_analytics_data(
+        self,
+        org_id: str,
+        start_date: datetime,
+        end_date: datetime,
+        dept_id: Optional[str] = None
+    ) -> dict:
+        match_query = {
+            "org_id": org_id,
+            "timestamp": {"$gte": start_date, "$lte": end_date}
+        }
+        
+        # If dept_id is provided, we need to join with employees first
+        pipeline_match = [{"$match": match_query}]
+        
+        if dept_id:
+            pipeline_match.extend([
+                {
+                    "$lookup": {
+                        "from": "employees",
+                        "localField": "employee_id",
+                        "foreignField": "_id",
+                        "as": "employee"
+                    }
+                },
+                {"$unwind": "$employee"},
+                {"$match": {"employee.dept_id": dept_id}}
+            ])
+
+        # Aggregate metrics
+        metrics_pipeline = pipeline_match + [
+            {
+                "$facet": {
+                    "status_counts": [
+                        {"$match": {"status": {"$in": ["present", "late", "success"]}}},
+                        {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+                    ],
+                    "daily_trends": [
+                        {"$match": {"status": {"$in": ["present", "late", "success"]}, "attendance_type": "entry"}},
+                        {
+                            "$group": {
+                                "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}},
+                                "count": {"$sum": 1}
+                            }
+                        },
+                        {"$sort": {"_id": 1}},
+                        {"$project": {"date": "$_id", "count": 1, "_id": 0}}
+                    ],
+                    "punctuality": [
+                        {"$match": {"attendance_type": "entry", "status": {"$in": ["present", "late"]}}},
+                        {
+                            "$group": {
+                                "_id": None,
+                                "total": {"$sum": 1},
+                                "present": {"$sum": {"$cond": [{"$eq": ["$status", "present"]}, 1, 0]}}
+                            }
+                        }
+                    ],
+                    "peak_arrival": [
+                        {"$match": {"attendance_type": "entry", "status": {"$in": ["present", "late"]}}},
+                        {
+                            "$project": {
+                                "hour": {"$hour": "$timestamp"},
+                                "minute": {"$minute": "$timestamp"}
+                            }
+                        },
+                        {
+                            "$project": {
+                                "slot": {
+                                    "$concat": [
+                                        {"$toString": "$hour"},
+                                        ":",
+                                        {"$cond": [{"$lt": ["$minute", 30]}, "00", "30"]}
+                                    ]
+                                }
+                            }
+                        },
+                        {"$group": {"_id": "$slot", "count": {"$sum": 1}}},
+                        {"$sort": {"count": -1}},
+                        {"$limit": 1}
+                    ],
+                    "hours_worked": [
+                        {"$match": {"status": {"$in": ["present", "late", "success"]}}},
+                        {"$sort": {"timestamp": 1}},
+                        {
+                            "$group": {
+                                "_id": {
+                                    "employee_id": "$employee_id",
+                                    "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}}
+                                },
+                                "logs": {"$push": {"t": "$timestamp", "type": "$attendance_type"}}
+                            }
+                        },
+                        {
+                            "$project": {
+                                "day_duration": {
+                                    "$reduce": {
+                                        "input": "$logs",
+                                        "initialValue": {"sum": 0, "last_entry": None},
+                                        "in": {
+                                            "$cond": [
+                                                {"$eq": ["$$this.type", "entry"]},
+                                                {"sum": "$$value.sum", "last_entry": "$$this.t"},
+                                                {
+                                                    "$cond": [
+                                                        {"$ne": ["$$value.last_entry", None]},
+                                                        {
+                                                            "sum": {"$add": ["$$value.sum", {"$subtract": ["$$this.t", "$$value.last_entry"]}]},
+                                                            "last_entry": None
+                                                        },
+                                                        {"sum": "$$value.sum", "last_entry": None}
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "$group": {
+                                "_id": None,
+                                "total_ms": {"$sum": "$day_duration.sum"}
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+
+        cursor = self.collection.aggregate(metrics_pipeline)
+        result = await cursor.to_list(length=1)
+        
+        if not result:
+            return {}
+            
+        data = result[0]
+        
+        # Format status breakdown
+        status_breakdown = {"present": 0, "late": 0, "absent": 0}
+        for item in data["status_counts"]:
+            if item["_id"] in status_breakdown:
+                status_breakdown[item["_id"]] = item["count"]
+            elif item["_id"] == "success":
+                # success logs might be 'present' if they are 'entry'?
+                pass
+
+        # Calculate avg punctuality
+        avg_punctuality = 0
+        if data["punctuality"]:
+            p = data["punctuality"][0]
+            if p["total"] > 0:
+                avg_punctuality = round((p["present"] / p["total"]) * 100, 2)
+
+        # Peak arrival
+        peak_arrival = "N/A"
+        if data["peak_arrival"]:
+            peak_arrival = data["peak_arrival"][0]["_id"]
+            # Ensure HH:mm format
+            if ":" in peak_arrival:
+                h, m = peak_arrival.split(":")
+                peak_arrival = f"{int(h):02d}:{m}"
+
+        # Total hours
+        total_hours = 0
+        if data["hours_worked"]:
+            total_ms = data["hours_worked"][0]["total_ms"]
+            total_hours = round(total_ms / (1000 * 60 * 60), 2)
+
+        return {
+            "avg_punctuality": avg_punctuality,
+            "peak_arrival_time": peak_arrival,
+            "total_hours_worked": total_hours,
+            "daily_trends": data["daily_trends"],
+            "status_breakdown": status_breakdown
+        }

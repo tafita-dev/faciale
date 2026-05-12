@@ -5,10 +5,17 @@
     *   Primary: Deep Blue (`#0047AB`) - Used for primary buttons, headers, and active states.
     *   Background: Pure White (`#FFFFFF`) - Clean, medical/professional feel.
     *   Text: Black (`#000000`) - High contrast for readability.
-    *   Accents: Light Grey (`#F5F5F5`) - Used for card backgrounds and input fields.
-    *   Feedback: Success Green (`#28A745`), Error/Spoof Red (`#DC3545`).
-*   **Typography:** Clean, sans-serif font (e.g., Roboto or Inter). Bold for headings, Regular for body.
-*   **Navigation:**
+    *   **Accents:** Light Grey (`#F5F5F5`) - Used for card backgrounds and input fields.
+        *   **Neumorphic Shadows:**
+            *   Light: `#FFFFFF` (Pure White).
+            *   Dark: `#D1D9E6` (Soft Grey-Blue).
+        *   **Feedback:** Success Green (`#28A745`), Error/Spoof Red (`#DC3545`), Warning Orange (`#FFC107`).
+    *   **Typography:** Clean, sans-serif font (e.g., Roboto or Inter). Bold for headings, Regular for body.
+    *   **Neumorphism (I-POINTEO Style):** 
+        *   Cards and buttons use a "soft-extrusion" effect with dual shadows (light on top-left, dark on bottom-right).
+        *   Concave (inset) style for active states or text input fields.
+    *   **Navigation:**
+
     *   **Admin/Org Admin:** Persistent Bottom Navigation Bar (Dashboard, Employees, Reports, Profile).
     *   **Employee/Public (Scanning):** Immersive full-screen camera view with minimal overlay controls.
 
@@ -56,6 +63,31 @@
 *   **Interactions:**
     *   **Capture Clicked:** Opens camera -> User takes photo -> App shows "Image Quality Check" (Ensure face is clear).
     *   **Save Clicked:** Show "Generating Secure Identity..." loading state -> Redirect to Employee List on success.
+
+### Screen: Advanced Reporting Dashboard
+*   **Route:** `/admin/reports/analytics`
+*   **Elements:**
+    *   **Date Range Selector:** A horizontal scrollable bar or dropdown for "Last 7 Days", "Last 30 Days", "Custom".
+    *   **Neumorphic Metric Cards:** 
+        *   Layout: Three cards in a horizontal row (or grid on small screens).
+        *   Content: Small icon, Label (e.g., "Avg. Punctuality"), and Large Value (e.g., "92%").
+        *   Style: Deep Blue text for values, bold typography.
+    *   **Line Chart (Trends):** 
+        *   Card: Large Neumorphic container.
+        *   X-Axis: Dates; Y-Axis: Attendance Count.
+        *   Interaction: Tap a point to show a popup with "Date: [Date], Present: [Count]".
+    *   **Doughnut Chart (Breakdown):**
+        *   Colors: Green (Present), Orange (Late), Red (Absent).
+        *   Center Label: Total "Expected" attendance for the period.
+        *   Legend: Interactive labels that toggle visibility of segments.
+    *   **Export Action:** A persistent Blue FAB with a "Download" icon.
+*   **Interactions:**
+    *   **Chart Drill-down:** 
+        *   Tapping a segment in the Doughnut chart or a point in the Line chart navigates to the `/admin/reports` screen.
+        *   The destination screen (Report View) must automatically apply filters (Status, Date) based on the clicked element.
+    *   **Loading State:** Shimmer effect on cards and skeleton loaders for charts while data is being fetched from `/reports/analytics`.
+    *   **Empty State:** "No data for this period" illustration and a "Change Date" button.
+    *   **Filter Change:** Real-time update of all charts and metrics with a fade-in animation.
 
 ## 3. User Flows
 

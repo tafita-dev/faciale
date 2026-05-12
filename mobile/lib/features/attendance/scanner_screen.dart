@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'offline_storage_service.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/neumorphic_card.dart';
 import 'scanner_state.dart';
@@ -34,6 +35,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
   @override
   Widget build(BuildContext context) {
     final scannerState = ref.watch(scannerProvider);
+    final pendingCount = ref.watch(pendingScansCountProvider);
 
     // Listen for state changes to manage the modal
     ref.listen(scannerProvider, (previous, next) {
@@ -78,7 +80,16 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                         icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
-                      _buildModeSelector(context, ref, scannerState),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (pendingCount > 0) ...[
+                            _buildPendingIndicator(context, pendingCount),
+                            const SizedBox(width: 8),
+                          ],
+                          _buildModeSelector(context, ref, scannerState),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -240,6 +251,29 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
       case 'red': return Icons.error;
       default: return Icons.info;
     }
+  }
+
+  Widget _buildPendingIndicator(BuildContext context, int count) {
+    return NeumorphicCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      borderRadius: 20,
+      backgroundColor: Colors.black.withOpacity(0.5),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.cloud_upload_outlined, color: Colors.orange, size: 16),
+          const SizedBox(width: 6),
+          Text(
+            '$count ${'pending'.tr()}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildModeSelector(BuildContext context, WidgetRef ref, ScannerState state) {

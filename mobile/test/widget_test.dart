@@ -8,12 +8,20 @@ import 'package:faciale/features/auth/login_screen.dart';
 import 'package:camera/camera.dart';
 import 'package:faciale/features/employees/camera_provider.dart';
 import 'package:faciale/features/attendance/scanner_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:faciale/features/attendance/offline_storage_service.dart';
 
 void main() {
+  setUpAll(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('Global Theme and Navigation Presence Test', (WidgetTester tester) async {
+    final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
           camerasProvider.overrideWith((ref) => Future.value([
             const CameraDescription(
               name: '0',
@@ -54,9 +62,11 @@ void main() {
   });
 
   testWidgets('Scanner screen hides navigation bar', (WidgetTester tester) async {
+    final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
           camerasProvider.overrideWith((ref) => Future.value([
             const CameraDescription(
               name: '0',

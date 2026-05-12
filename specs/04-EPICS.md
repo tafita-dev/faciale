@@ -65,17 +65,35 @@
 ## [Epic 11] Shift Management & Push Notifications
 
 - **Goal:** Implement configurable work/school hours and real-time notifications for check-ins and late arrivals.
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Ref:** PRD Feature: Attendance via Facial Recognition (Enhanced)
 
 ## [Epic 12] Branding & Advanced UI/UX Optimization
 
 - **Goal:** Modernize UI with "I-POINTEO" branding, role-based profile displays, and enhanced data visualization with photos/logos.
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Ref:** User Request (April 2026) - Branding & UX Polish
 
 ## [Epic 13] Attendance Logic Refinement & Immersive UX
 
 - **Goal:** Implement automatic entry/exit toggling and modernize the scanning UI for a professional "I-POINTEO" experience.
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Ref:** User Request (May 2026) - Refined Attendance Spec
+
+## [Epic 14] Immersive Scanner Experience (I-POINTEO)
+
+- **Goal:** Real-time face validation, optimized camera management, and immersive UI for the main scanning flow.
+- **Status:** DONE
+- **Ref:** User Request (May 2026) - Scanner Modernization
+
+## [Epic 15] Immersive Enrollment Experience
+
+- **Goal:** Streamlined employee enrollment with real-time feedback and high-quality photo capture.
+- **Status:** DONE
+- **Ref:** User Request (May 2026) - Enrollment Modernization
+
+## [Epic 16] Advanced Reporting & Dashboard Analytics
+
+- **Goal:** Enhance the Admin Dashboard with data visualization, trend analysis, and advanced filtering for attendance logs.
+- **Status:** PLANNED
+- **Ref:** PRD Feature: Attendance Reporting (Enhanced)

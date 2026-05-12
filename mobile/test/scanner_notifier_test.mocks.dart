@@ -39,9 +39,23 @@ class MockAttendanceRepository extends _i1.Mock
   _i3.Future<Map<String, dynamic>> checkIn(
     String? imagePath, {
     String? forceType,
+    bool? isOffline = false,
+    String? orgId,
+    String? userId,
+    String? timestamp,
   }) =>
       (super.noSuchMethod(
-            Invocation.method(#checkIn, [imagePath], {#forceType: forceType}),
+            Invocation.method(
+              #checkIn,
+              [imagePath],
+              {
+                #forceType: forceType,
+                #isOffline: isOffline,
+                #orgId: orgId,
+                #userId: userId,
+                #timestamp: timestamp,
+              },
+            ),
             returnValue: _i3.Future<Map<String, dynamic>>.value(
               <String, dynamic>{},
             ),
@@ -65,6 +79,32 @@ class MockFaceDetectorService extends _i1.Mock
             returnValue: _i3.Future<List<_i5.Face>>.value(<_i5.Face>[]),
           )
           as _i3.Future<List<_i5.Face>>);
+
+  @override
+  _i3.Future<List<_i5.Face>> detectFacesFromInputImage(
+    _i5.InputImage? inputImage,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#detectFacesFromInputImage, [inputImage]),
+            returnValue: _i3.Future<List<_i5.Face>>.value(<_i5.Face>[]),
+          )
+          as _i3.Future<List<_i5.Face>>);
+
+  @override
+  bool isFaceValid(_i5.Face? face) =>
+      (super.noSuchMethod(
+            Invocation.method(#isFaceValid, [face]),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  bool isLive(_i5.Face? face) =>
+      (super.noSuchMethod(
+            Invocation.method(#isLive, [face]),
+            returnValue: false,
+          )
+          as bool);
 
   @override
   _i3.Future<void> dispose() =>

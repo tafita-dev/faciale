@@ -10,6 +10,8 @@ import 'package:faciale/features/attendance/attendance_repository.dart';
 import 'package:faciale/features/employees/camera_provider.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
+import 'package:faciale/features/auth/auth_provider.dart';
+import 'package:faciale/features/auth/auth_state.dart';
 
 import 'US_13_ATT_003_test.mocks.dart';
 
@@ -39,6 +41,7 @@ void main() {
       ProviderScope(
         overrides: [
           camerasProvider.overrideWith((ref) => Future.value([camera])),
+          authProvider.overrideWith(() => AuthNotifier()),
         ],
         child: const MaterialApp(
           home: ScannerScreen(),
@@ -69,10 +72,17 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         attendanceRepositoryProvider.overrideWithValue(mockRepository),
+        authProvider.overrideWith(() => AuthNotifier()),
       ],
     );
 
-    when(mockRepository.checkIn(any)).thenAnswer((_) async {
+    when(mockRepository.checkIn(any,
+      forceType: anyNamed('forceType'),
+      isOffline: anyNamed('isOffline'),
+      orgId: anyNamed('orgId'),
+      userId: anyNamed('userId'),
+      timestamp: anyNamed('timestamp'),
+    )).thenAnswer((_) async {
       await Future.delayed(const Duration(milliseconds: 50));
       return {'success': true, 'message': 'Success', 'data': {'employee_name': 'John', 'type': 'entry'}};
     });
@@ -87,8 +97,20 @@ void main() {
     await Future.wait([future1, future2]);
 
     // Verify repository was only called ONCE
-    verify(mockRepository.checkIn('path1')).called(1);
-    verifyNever(mockRepository.checkIn('path2'));
+    verify(mockRepository.checkIn('path1',
+      forceType: anyNamed('forceType'),
+      isOffline: anyNamed('isOffline'),
+      orgId: anyNamed('orgId'),
+      userId: anyNamed('userId'),
+      timestamp: anyNamed('timestamp'),
+    )).called(1);
+    verifyNever(mockRepository.checkIn('path2',
+      forceType: anyNamed('forceType'),
+      isOffline: anyNamed('isOffline'),
+      orgId: anyNamed('orgId'),
+      userId: anyNamed('userId'),
+      timestamp: anyNamed('timestamp'),
+    ));
     
     container.dispose();
   });

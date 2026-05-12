@@ -99,6 +99,29 @@ async def export_attendance_logs(
         }
     )
 
+@router.get("/analytics", response_model=dict)
+async def get_advanced_analytics(
+    start_date: str = Query(...),
+    end_date: str = Query(...),
+    dept_id: Optional[str] = None,
+    current_user: dict = Depends(deps.check_org_admin),
+    reporting_service: ReportingService = Depends(deps.get_reporting_service)
+) -> Any:
+    """
+    Get aggregated analytics for the organization.
+    Only accessible by Admin.
+    """
+    analytics = await reporting_service.get_advanced_analytics(
+        org_id=current_user["org_id"],
+        start_date=start_date,
+        end_date=end_date,
+        dept_id=dept_id
+    )
+    return {
+        "success": True,
+        "data": analytics
+    }
+
 @router.get("/system-stats", response_model=dict)
 async def get_system_stats(
     current_user: dict = Depends(deps.check_superadmin),

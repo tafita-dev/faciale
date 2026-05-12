@@ -50,7 +50,7 @@ class AttendanceService:
         except Exception:
             return AttendanceStatus.present
 
-    async def process_attendance(self, org_id: str, img_bytes: bytes, user_id: str = None, force_type: str = None) -> dict:
+    async def process_attendance(self, org_id: str, img_bytes: bytes, user_id: str = None, force_type: str = None, timestamp: datetime = None) -> dict:
         """
         Processes an attendance attempt:
         1. Perform end-to-end recognition (liveness + matching).
@@ -65,7 +65,8 @@ class AttendanceService:
                 user_id=user_id,
                 status=AttendanceStatus.failed,
                 reason=AttendanceReason.spoof_detected,
-                confidence_score=rec_result["score"]
+                confidence_score=rec_result["score"],
+                timestamp=timestamp or datetime.now(timezone.utc)
             )
             await self.attendance_repo.create_log(log)
             return {
@@ -76,7 +77,7 @@ class AttendanceService:
 
         if rec_result["match"]:
             employee_id = rec_result["employee_id"]
-            now = datetime.now(timezone.utc)
+            now = timestamp or datetime.now(timezone.utc)
             
             # Toggling logic (if force_type not provided)
             if force_type:

@@ -43,6 +43,32 @@ class MockFaceDetectorService extends _i1.Mock
           as _i3.Future<List<_i4.Face>>);
 
   @override
+  _i3.Future<List<_i4.Face>> detectFacesFromInputImage(
+    _i4.InputImage? inputImage,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#detectFacesFromInputImage, [inputImage]),
+            returnValue: _i3.Future<List<_i4.Face>>.value(<_i4.Face>[]),
+          )
+          as _i3.Future<List<_i4.Face>>);
+
+  @override
+  bool isFaceValid(_i4.Face? face) =>
+      (super.noSuchMethod(
+            Invocation.method(#isFaceValid, [face]),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  bool isLive(_i4.Face? face) =>
+      (super.noSuchMethod(
+            Invocation.method(#isLive, [face]),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
   _i3.Future<void> dispose() =>
       (super.noSuchMethod(
             Invocation.method(#dispose, []),

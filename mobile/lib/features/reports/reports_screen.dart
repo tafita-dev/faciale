@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:go_router/go_router.dart';
 import '../auth/auth_provider.dart';
 import 'reports_provider.dart';
 import '../../core/theme.dart';
@@ -63,6 +64,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               icon: const Icon(Icons.download),
               tooltip: 'export_csv'.tr(),
               onPressed: () => ref.read(reportsProvider.notifier).exportLogs(),
+            ),
+          if (isAdmin)
+            IconButton(
+              icon: const Icon(Icons.bar_chart),
+              tooltip: 'Analytics',
+              onPressed: () => context.go('/reports/analytics'),
             ),
           if (isAdmin)
             IconButton(

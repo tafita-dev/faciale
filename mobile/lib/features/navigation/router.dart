@@ -5,6 +5,7 @@ import '../dashboard/dashboard_screen.dart';
 import '../employees/employees_screen.dart';
 import '../employees/directory_screen.dart';
 import '../reports/reports_screen.dart';
+import '../reports/analytics_screen.dart';
 import '../profile/profile_screen.dart';
 import '../settings/settings_screen.dart';
 import '../attendance/scanner_screen.dart';
@@ -102,6 +103,12 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/reports',
                 builder: (context, state) => const ReportsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'analytics',
+                    builder: (context, state) => const AnalyticsScreen(),
+                  ),
+                ],
               ),
             ],
           ),

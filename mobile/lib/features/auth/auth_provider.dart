@@ -97,6 +97,7 @@ class AuthNotifier extends Notifier<AuthState> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         state = state.copyWith(
+          userId: data['id'],
           email: data['email'],
           name: data['name'],
           role: data['role'],

@@ -12,6 +12,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/services/notification_service.dart';
 import 'core/ux/ux_provider.dart';
 import 'dart:ui';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'features/attendance/offline_storage_service.dart';
+import 'features/attendance/sync_service.dart';
 
 import 'features/auth/auth_provider.dart';
 import 'features/auth/auth_state.dart';
@@ -38,6 +41,7 @@ void main() async {
 
   await EasyLocalization.ensureInitialized();
   await dotenv.load(fileName: ".env");
+  final prefs = await SharedPreferences.getInstance();
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: AppColors.primary,
@@ -50,8 +54,11 @@ void main() async {
       supportedLocales: const [Locale('en'), Locale('fr')],
       path: 'assets/translations',
       fallbackLocale: const Locale('en'),
-      child: const ProviderScope(
-        child: FacialeApp(),
+      child: ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: const FacialeApp(),
       ),
     ),
   );
@@ -62,6 +69,9 @@ class FacialeApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Initialize SyncService
+    ref.watch(syncServiceProvider);
+    
     final router = ref.watch(routerProvider);
     final connectivity = ref.watch(connectivityProvider);
     final ux = ref.watch(uxProvider);
@@ -77,7 +87,7 @@ class FacialeApp extends ConsumerWidget {
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(next.text.tr()),
+              content: Text(next.args != null ? next.text.tr(args: next.args) : next.text.tr()),
               backgroundColor: color,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

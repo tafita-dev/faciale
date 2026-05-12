@@ -14,6 +14,7 @@ async def check_in(
     *,
     file: UploadFile = File(...),
     force_type: str | None = None,
+    timestamp: str | None = None,
     current_user: dict = Depends(deps.check_only_user),
     attendance_service: AttendanceService = Depends(deps.get_attendance_service),
     employee_repo: EmployeeRepository = Depends(deps.get_employee_repository),
@@ -26,6 +27,15 @@ async def check_in(
     """
     org_id = current_user.get("org_id")
     user_id = current_user.get("_id")
+
+    # Parse timestamp if provided
+    dt_timestamp = None
+    if timestamp:
+        try:
+            # ISO format like 2023-01-01T10:00:00Z or 2023-01-01T10:00:00+00:00
+            dt_timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+        except ValueError:
+            pass
     
     # 0. Validate force_type
     if force_type and force_type not in ["entry", "exit"]:
@@ -66,7 +76,13 @@ async def check_in(
     
     # 3. Process attendance (Liveness + Matching + Logging)
     try:
-        result = await attendance_service.process_attendance(org_id, contents, user_id=user_id, force_type=force_type)
+        result = await attendance_service.process_attendance(
+            org_id, 
+            contents, 
+            user_id=user_id, 
+            force_type=force_type,
+            timestamp=dt_timestamp
+        )
     except ValueError as e:
         error_msg = str(e)
         message = "Erreur de traitement"

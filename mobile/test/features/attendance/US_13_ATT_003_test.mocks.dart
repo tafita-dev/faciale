@@ -36,9 +36,23 @@ class MockAttendanceRepository extends _i1.Mock
   _i3.Future<Map<String, dynamic>> checkIn(
     String? imagePath, {
     String? forceType,
+    bool? isOffline = false,
+    String? orgId,
+    String? userId,
+    String? timestamp,
   }) =>
       (super.noSuchMethod(
-            Invocation.method(#checkIn, [imagePath], {#forceType: forceType}),
+            Invocation.method(
+              #checkIn,
+              [imagePath],
+              {
+                #forceType: forceType,
+                #isOffline: isOffline,
+                #orgId: orgId,
+                #userId: userId,
+                #timestamp: timestamp,
+              },
+            ),
             returnValue: _i3.Future<Map<String, dynamic>>.value(
               <String, dynamic>{},
             ),

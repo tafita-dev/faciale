@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
+import '../../core/network/connectivity_provider.dart';
+import 'package:faciale/features/auth/auth_provider.dart';
 import 'attendance_repository.dart';
 import 'face_detector_service.dart';
 
@@ -153,15 +155,27 @@ class ScannerNotifier extends Notifier<ScannerState> {
       setStatus(ScannerStatus.processing, message: 'analyzing'.tr());
 
       final repository = ref.read(attendanceRepositoryProvider);
+      final connectivity = ref.read(connectivityProvider);
+      final isOffline = connectivity.maybeWhen(
+        data: (status) => status == ConnectivityStatus.isDisconnected,
+        orElse: () => false,
+      );
       
       String? forceType;
       if (state.scanningMode == ScanningMode.entry) forceType = 'entry';
       if (state.scanningMode == ScanningMode.exit) forceType = 'exit';
 
-      final result = await repository.checkIn(imagePath, forceType: forceType);
+      final auth = ref.read(authProvider);
+      final result = await repository.checkIn(
+        imagePath, 
+        forceType: forceType, 
+        isOffline: isOffline,
+        orgId: auth.orgId,
+        userId: auth.userId,
+      );
 
       if (result['success'] == true) {
-        final data = result['data'];
+        final data = result['data'] ?? {};
         final ui = result['ui'] ?? {};
         setStatus(
           ScannerStatus.success, 

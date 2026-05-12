@@ -6,15 +6,43 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../auth/auth_provider.dart';
 import 'package:http_parser/http_parser.dart'; 
+import 'offline_storage_service.dart';
 
 class AttendanceRepository {
   final http.Client _client;
   final FlutterSecureStorage _storage;
   final String _baseUrl;
+  final OfflineStorageService? _offlineStorage;
+  final void Function()? _onOfflineSave;
 
-  AttendanceRepository(this._client, this._storage, this._baseUrl);
+  AttendanceRepository(
+    this._client, 
+    this._storage, 
+    this._baseUrl, {
+    OfflineStorageService? offlineStorage,
+    void Function()? onOfflineSave,
+  }) : _offlineStorage = offlineStorage,
+       _onOfflineSave = onOfflineSave;
 
-  Future<Map<String, dynamic>> checkIn(String imagePath, {String? forceType}) async {
+  Future<Map<String, dynamic>> checkIn(String imagePath, {String? forceType, bool isOffline = false, String? orgId, String? userId, String? timestamp}) async {
+    if (isOffline && _offlineStorage != null) {
+      try {
+        await _offlineStorage!.saveScan(imagePath, forceType, orgId: orgId, userId: userId);
+        _onOfflineSave?.call();
+        return {
+          'success': true,
+          'message': 'Scan saved locally (Offline)',
+          'offline': true,
+        };
+      } catch (e) {
+        return {
+          'success': false,
+          'message': e.toString().contains('full') ? 'Storage full. Scan could not be saved.' : 'Could not save scan locally: $e',
+          'error': e.toString(),
+        };
+      }
+    }
+
     final token = await _storage.read(key: 'jwt_token');
     
     if (token == null) {
@@ -29,6 +57,10 @@ class AttendanceRepository {
     if (forceType != null) {
       request.fields['force_type'] = forceType;
     }
+
+    if (timestamp != null) {
+      request.fields['timestamp'] = timestamp;
+    }
           final extension = imagePath.split('.').last.toLowerCase();
 final type = (extension == 'png') ? 'png' : 'jpeg';
 
@@ -41,7 +73,7 @@ request.files.add(
 
 );
 
-    final streamedResponse = await request.send();
+    final streamedResponse = await _client.send(request);
     final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode == 200) {
@@ -61,5 +93,15 @@ final attendanceRepositoryProvider = Provider((ref) {
   final client = ref.read(httpClientProvider);
   final storage = ref.read(secureStorageProvider);
   final baseUrl = dotenv.env['API_URL'] ?? 'http://localhost:8000/api/v1';
-  return AttendanceRepository(client, storage, baseUrl);
+  final offlineStorage = ref.read(offlineStorageServiceProvider);
+  
+  return AttendanceRepository(
+    client, 
+    storage, 
+    baseUrl, 
+    offlineStorage: offlineStorage,
+    onOfflineSave: () {
+      ref.read(pendingScansCountProvider.notifier).refresh();
+    },
+  );
 });

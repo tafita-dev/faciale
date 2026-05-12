@@ -11,6 +11,7 @@
 | **Liveness (Anti-Spoof)** | `backend/app/services/liveness.py` | N/A | Internal Service |
 | **Vector Search** | `backend/app/repositories/vector_db.py` | N/A | Qdrant Client |
 | **Reporting** | `backend/app/api/v1/endpoints/reports.py` | `mobile/lib/features/dashboard/` | `GET /reports` / `report_view.dart` |
+| **Analytics** | `backend/app/services/reporting_service.py` | `mobile/lib/features/reports/` | `GET /reports/analytics` / `analytics_screen.dart` |
 
 ## Dependency Graph
 *   `services/recognition` depends on `repositories/vector_db` and `services/liveness`.

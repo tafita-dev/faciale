@@ -4,6 +4,8 @@ import 'package:mockito/mockito.dart';
 import 'package:faciale/features/attendance/attendance_repository.dart';
 import 'package:faciale/features/attendance/scanner_state.dart';
 import 'package:fake_async/fake_async.dart';
+import 'package:faciale/features/auth/auth_provider.dart';
+import 'package:faciale/features/auth/auth_state.dart';
 import 'US_13_ATT_003_test.mocks.dart';
 
 void main() {
@@ -15,6 +17,7 @@ void main() {
     container = ProviderContainer(
       overrides: [
         attendanceRepositoryProvider.overrideWithValue(mockRepository),
+        authProvider.overrideWith(() => AuthNotifier()),
       ],
     );
   });
@@ -25,7 +28,13 @@ void main() {
 
   test('processImage success populates new fields and auto-resets', () {
     fakeAsync((async) {
-      when(mockRepository.checkIn(any)).thenAnswer((_) async => {
+      when(mockRepository.checkIn(any,
+        forceType: anyNamed('forceType'),
+        isOffline: anyNamed('isOffline'),
+        orgId: anyNamed('orgId'),
+        userId: anyNamed('userId'),
+        timestamp: anyNamed('timestamp'),
+      )).thenAnswer((_) async => {
         'success': true,
         'message': 'Success: John Doe checked in.',
         'data': {
@@ -56,7 +65,13 @@ void main() {
 
   test('processImage failure still auto-resets', () {
     fakeAsync((async) {
-      when(mockRepository.checkIn(any)).thenAnswer((_) async => {
+      when(mockRepository.checkIn(any,
+        forceType: anyNamed('forceType'),
+        isOffline: anyNamed('isOffline'),
+        orgId: anyNamed('orgId'),
+        userId: anyNamed('userId'),
+        timestamp: anyNamed('timestamp'),
+      )).thenAnswer((_) async => {
         'success': false,
         'message': 'Face not recognized.',
       });

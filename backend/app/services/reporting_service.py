@@ -202,3 +202,66 @@ class ReportingService:
                 yield generate_pdf()
             
             return stream_pdf()
+
+    async def get_advanced_analytics(
+        self,
+        org_id: str,
+        start_date: str,
+        end_date: str,
+        dept_id: Optional[str] = None
+    ) -> dict:
+        # Convert string dates to datetime objects
+        try:
+            start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+        except ValueError:
+            # Fallback to date only
+            start_dt = datetime.combine(datetime.fromisoformat(start_date).date(), time.min).replace(tzinfo=timezone.utc)
+            
+        try:
+            end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+        except ValueError:
+            # Fallback to date only, include end of day
+            end_dt = datetime.combine(datetime.fromisoformat(end_date).date(), time.max).replace(tzinfo=timezone.utc)
+
+        # Fetch Org settings for late threshold (passed to repo if needed, but repo currently does its own match)
+        org = await self.org_repo.get_org(org_id)
+        start_time_str = "09:00"
+        late_buffer = 15
+        
+        if org:
+            if hasattr(org, 'settings') and org.settings:
+                start_time_str = org.settings.start_time
+                late_buffer = org.settings.late_buffer_minutes
+            elif isinstance(org, dict) and "settings" in org:
+                settings = org["settings"]
+                start_time_str = settings.get("start_time", "09:00")
+                late_buffer = settings.get("late_buffer_minutes", 15)
+
+        h, m = map(int, start_time_str.split(':'))
+        total_minutes = h * 60 + m + late_buffer
+        threshold_h = (total_minutes // 60) % 24
+        threshold_m = total_minutes % 60
+        late_threshold_time = f"{threshold_h:02d}:{threshold_m:02d}"
+
+        # Fetch metrics from repository
+        analytics = await self.attendance_repo.get_analytics_data(
+            org_id=org_id,
+            start_date=start_dt,
+            end_date=end_dt,
+            dept_id=dept_id
+        )
+
+        # Calculate absent counts for the breakdown
+        total_employees = await self.employee_repo.count_employees(org_id, dept_id=dept_id)
+        
+        # Approximate number of working days in the range
+        days_diff = (end_dt.date() - start_dt.date()).days + 1
+        # In a real app, we'd subtract weekends/holidays, but for now we keep it simple
+        total_possible_attendances = total_employees * days_diff
+        
+        present_count = analytics["status_breakdown"]["present"]
+        late_count = analytics["status_breakdown"]["late"]
+        
+        analytics["status_breakdown"]["absent"] = max(0, total_possible_attendances - present_count - late_count)
+
+        return analytics

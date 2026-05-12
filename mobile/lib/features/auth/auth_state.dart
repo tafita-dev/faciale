@@ -1,6 +1,7 @@
 class AuthState {
   final bool isLoading;
   final String? token;
+  final String? userId;
   final String? role;
   final String? orgId;
   final String? email;
@@ -12,6 +13,7 @@ class AuthState {
   AuthState({
     this.isLoading = false,
     this.token,
+    this.userId,
     this.role,
     this.orgId,
     this.email,
@@ -24,6 +26,7 @@ class AuthState {
   AuthState copyWith({
     bool? isLoading,
     String? token,
+    String? userId,
     String? role,
     String? orgId,
     String? email,
@@ -35,6 +38,7 @@ class AuthState {
     return AuthState(
       isLoading: isLoading ?? this.isLoading,
       token: token ?? this.token,
+      userId: userId ?? this.userId,
       role: role ?? this.role,
       orgId: orgId ?? this.orgId,
       email: email ?? this.email,
