@@ -7,6 +7,9 @@ class ReportsState {
   final List<AttendanceLog> logs;
   final AnalyticsData? analyticsData;
   final String? error;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final String? deptId;
 
   ReportsState({
     this.isLoading = false,
@@ -14,6 +17,9 @@ class ReportsState {
     this.logs = const [],
     this.analyticsData,
     this.error,
+    this.startDate,
+    this.endDate,
+    this.deptId,
   });
 
   ReportsState copyWith({
@@ -22,6 +28,9 @@ class ReportsState {
     List<AttendanceLog>? logs,
     AnalyticsData? analyticsData,
     String? error,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? deptId,
   }) {
     return ReportsState(
       isLoading: isLoading ?? this.isLoading,
@@ -29,6 +38,9 @@ class ReportsState {
       logs: logs ?? this.logs,
       analyticsData: analyticsData ?? this.analyticsData,
       error: error ?? this.error,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      deptId: deptId ?? this.deptId,
     );
   }
 }

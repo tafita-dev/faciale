@@ -1,7 +1,7 @@
 ---
 id: US-16-ANLY-003
 title: Mobile - Analytics Filtering & Date Range
-status: READY
+status: IN_PROGRESS
 type: feature
 ---
 
